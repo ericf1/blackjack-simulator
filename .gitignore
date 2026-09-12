@@ -1,0 +1,21 @@
+node_modules/
+.pi/sandbox.json
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts# environment / secrets (not part of the project)
+.env
+
+.claude/
+id_rsa
+id_ed25519
+.bash_profile
+.bashrc
+.gitconfig
+
+.profile
+.ripgreprc
+.zprofile
+.zshrc
+**/*:Zone.Identifier
+.pi/sandbox.json
