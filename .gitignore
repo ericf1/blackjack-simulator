@@ -20,3 +20,6 @@ id_ed25519
 .zshrc
 **/*:Zone.Identifier
 .pi/sandbox.json
+
+# impeccable skill working state (logs, question state, review captures)
+.impeccable/
