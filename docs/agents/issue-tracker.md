@@ -13,7 +13,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
-This clone's remote uses **SSH** (`git@github.com:ericf1/blackjack-simulator.git`) rather than HTTPS; `gh` works identically either way.
+This clone's remote uses **HTTPS** (`https://github.com/ericf1/blackjack-simulator.git`) with `gh auth setup-git` as the credential helper; `gh` works identically either way.
 
 ## Pull requests as a triage surface
 
