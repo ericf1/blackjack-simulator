@@ -12,7 +12,7 @@ The canon from the grilling session. The rules engine implements exactly this; t
 ## Shoe
 
 - **5 decks** (configurable constant).
-- **Cut card** at 75% penetration: when reached, reshuffle a full 5-deck Shoe before the next Round.
+- **Cut card** at 75% of the Shoe: when reached, reshuffle a full 5-deck Shoe before the next Round.
 
 ## Dealing
 

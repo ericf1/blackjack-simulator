@@ -10,15 +10,14 @@ export const MAX_SPOTS = 5;
 export const TOP_UP = 100_00;
 
 // ---- Types ----------------------------------------------------------------
-export type Phase = "betting" | "insurance" | "playing" | "dealer" | "settled";
+export type Phase = "betting" | "insurance" | "playing" | "settled";
 export type Result = "blackjack" | "win" | "push" | "lose" | "bust" | "surrender";
 export type Action = "hit" | "stand" | "double" | "split" | "surrender";
 
 export interface HandView {
   cards: Card[];
-  bet: number; // cents staked on this hand (doubled reflected here)
+  bet: number; // cents staked on this hand (a double-down doubles it here)
   done: boolean;
-  doubled: boolean;
   surrendered: boolean;
   splitAces: boolean;
   fromSplit: boolean;
@@ -40,6 +39,8 @@ export interface State {
   dealer: { cards: Card[]; holeRevealed: boolean };
   shoeRemaining: number;
   needsShuffle: boolean;
+  /** Total insurance premium for the current peek (nonzero only during the insurance phase). */
+  insuranceCost: number;
 }
 
 export interface TableOptions {
@@ -54,7 +55,7 @@ export interface TableOptions {
 // ---- Table ----------------------------------------------------------------
 export function createTable(options: TableOptions = {}) {
   const shoe = new Shoe(options.deck ?? null, options.decks ?? 5, options.rng);
-  const bank = { bankroll: options.bankroll ?? START_BANKROLL };
+  let bankroll = options.bankroll ?? START_BANKROLL;
   let spots: Spot[] = [];
   let phase: Phase = "betting";
   let active: { spot: number; hand: number } | null = null;
@@ -72,7 +73,7 @@ export function createTable(options: TableOptions = {}) {
   function state(): State {
     return {
       phase,
-      bankroll: bank.bankroll,
+      bankroll,
       spots: spots.map((spot) => ({
         id: spot.id,
         bet: spot.bet,
@@ -83,7 +84,13 @@ export function createTable(options: TableOptions = {}) {
       dealer: { cards: [...dealerCards], holeRevealed: dealerCards.length > 1 },
       shoeRemaining: shoe.remaining,
       needsShuffle: shoe.pastCut,
+      insuranceCost: phase === "insurance" ? insuranceCost() : 0,
     };
+  }
+
+  /** Half of every claimed bet — the price of insuring them all. */
+  function insuranceCost(): number {
+    return spots.reduce((sum, spot) => sum + Math.floor(spot.bet / 2), 0);
   }
 
   function legalActions({ spot, hand }: { spot: number; hand: number }): Action[] {
@@ -91,13 +98,13 @@ export function createTable(options: TableOptions = {}) {
     if (h.done) return [];
     const actions: Action[] = ["hit", "stand"];
     const firstTwo = h.cards.length === 2;
-    if (firstTwo && bank.bankroll >= h.bet) actions.push("double");
+    if (firstTwo && bankroll >= h.bet) actions.push("double");
     if (
       firstTwo &&
       isPair(h.cards) &&
       spots[spot].hands.length < 4 &&
       !h.splitAces &&
-      bank.bankroll >= h.bet
+      bankroll >= h.bet
     ) {
       actions.push("split");
     }
@@ -109,8 +116,9 @@ export function createTable(options: TableOptions = {}) {
     assertPhase("betting");
     if (spots.length >= MAX_SPOTS) throw new Error(`at most ${MAX_SPOTS} spots`);
     if (bet < TABLE_MIN || bet > TABLE_MAX) throw new Error(`bet must be $10–$2000`);
-    if (bank.bankroll < bet) throw new Error("insufficient bankroll");
-    bank.bankroll -= bet;
+    if (bet % 100 !== 0) throw new Error("bets are whole dollars");
+    if (bankroll < bet) throw new Error("insufficient bankroll");
+    bankroll -= bet;
     spots.push({ id: spots.length, bet, hands: [] });
   }
 
@@ -119,7 +127,6 @@ export function createTable(options: TableOptions = {}) {
       cards: [first],
       bet,
       done: false,
-      doubled: false,
       surrendered: false,
       splitAces: false,
       fromSplit: false,
@@ -152,9 +159,9 @@ export function createTable(options: TableOptions = {}) {
 
   function insure(): void {
     assertPhase("insurance");
-    const cost = spots.reduce((sum, spot) => sum + Math.floor(spot.bet / 2), 0);
-    if (bank.bankroll < cost) throw new Error("insufficient bankroll for insurance");
-    bank.bankroll -= cost;
+    const cost = insuranceCost();
+    if (bankroll < cost) throw new Error("insufficient bankroll for insurance");
+    bankroll -= cost;
     insuranceBet = cost;
     resolvePeek();
   }
@@ -167,15 +174,22 @@ export function createTable(options: TableOptions = {}) {
 
   function resolvePeek(): void {
     const up = dealerCards[0];
-    if (isTenValue(up) || up.rank === "A") {
-      if (isNatural([up, dealerHole!])) {
-        dealerCards.push(dealerHole!);
-        settleAll({ dealerNatural: true });
-        return;
-      }
+    const dealerBJ = (isTenValue(up) || up.rank === "A") && isNatural([up, dealerHole!]);
+    if (dealerBJ) dealerCards.push(dealerHole!);
+    settleInsurance(dealerBJ); // settled immediately after the peek (docs/rules.md)
+    if (dealerBJ) {
+      settleAll({ dealerNatural: true });
+      return;
     }
     phase = "playing";
     advance();
+  }
+
+  /** Insurance pays 2:1 (stake + 2×) on a dealer natural; the premium is forfeited otherwise. */
+  function settleInsurance(dealerBJ: boolean): void {
+    if (insuranceBet === 0) return;
+    if (dealerBJ) bankroll += insuranceBet * 3;
+    insuranceBet = 0;
   }
 
   function advance(): void {
@@ -191,7 +205,6 @@ export function createTable(options: TableOptions = {}) {
   }
 
   function playDealer(): void {
-    phase = "dealer";
     dealerCards.push(dealerHole!);
     if (spots.some((spot) => spot.hands.some((hand) => !isBust(hand) && !hand.surrendered))) {
       drawDealer();
@@ -220,34 +233,27 @@ export function createTable(options: TableOptions = {}) {
         const natural = isNatural(hand.cards) && !hand.fromSplit;
         if (hand.surrendered) {
           hand.result = "surrender";
-          bank.bankroll += Math.floor(hand.bet / 2);
+          bankroll += Math.floor(hand.bet / 2);
         } else if (dealerBJ && natural) {
           hand.result = "push";
-          bank.bankroll += hand.bet;
+          bankroll += hand.bet;
         } else if (dealerBJ) {
           hand.result = "lose";
         } else if (natural) {
           hand.result = "blackjack";
-          bank.bankroll += hand.bet + Math.floor((hand.bet * 3) / 2);
+          bankroll += hand.bet + Math.floor((hand.bet * 3) / 2);
         } else if (total > 21) {
           hand.result = "bust";
-        } else if (dealerTotal > 21) {
+        } else if (dealerTotal > 21 || total > dealerTotal) {
           hand.result = "win";
-          bank.bankroll += hand.bet * 2;
-        } else if (total > dealerTotal) {
-          hand.result = "win";
-          bank.bankroll += hand.bet * 2;
+          bankroll += hand.bet * 2;
         } else if (total === dealerTotal) {
           hand.result = "push";
-          bank.bankroll += hand.bet;
+          bankroll += hand.bet;
         } else {
           hand.result = "lose";
         }
       }
-    }
-    if (insuranceBet > 0) {
-      if (dealerBJ) bank.bankroll += insuranceBet * 3;
-      insuranceBet = 0;
     }
   }
 
@@ -266,10 +272,9 @@ export function createTable(options: TableOptions = {}) {
   function double(): void {
     const h = requireActive();
     if (h.cards.length !== 2) throw new Error("double on two cards only");
-    if (bank.bankroll < h.bet) throw new Error("insufficient bankroll to double");
-    bank.bankroll -= h.bet;
+    if (bankroll < h.bet) throw new Error("insufficient bankroll to double");
+    bankroll -= h.bet;
     h.bet *= 2;
-    h.doubled = true;
     h.cards.push(shoe.draw());
     h.done = true;
     advance();
@@ -281,20 +286,14 @@ export function createTable(options: TableOptions = {}) {
     if (h.cards.length !== 2 || !isPair(h.cards)) throw new Error("split pairs only");
     if (h.splitAces) throw new Error("split aces cannot be resplit");
     if (spot.hands.length >= 4) throw new Error("at most 4 hands per spot");
-    if (bank.bankroll < h.bet) throw new Error("insufficient bankroll to split");
+    if (bankroll < h.bet) throw new Error("insufficient bankroll to split");
 
-    bank.bankroll -= h.bet;
+    bankroll -= h.bet;
     const aces = h.cards[0].rank === "A";
     const second = h.cards.pop()!;
-    const twin: Hand = {
-      cards: [second],
-      bet: h.bet,
-      done: false,
-      doubled: false,
-      surrendered: false,
-      splitAces: aces,
-      fromSplit: true,
-    };
+    const twin = newHand(h.bet, second);
+    twin.splitAces = aces;
+    twin.fromSplit = true;
     h.splitAces = aces;
     h.fromSplit = true;
     spot.hands.splice(active!.hand + 1, 0, twin);
@@ -328,13 +327,13 @@ export function createTable(options: TableOptions = {}) {
     assertPhase("betting");
     const index = spots.findIndex((spot) => spot.id === id);
     if (index === -1) throw new Error("no such spot");
-    bank.bankroll += spots[index].bet;
+    bankroll += spots[index].bet;
     spots.splice(index, 1);
   }
 
   function topUp(): void {
-    if (bank.bankroll >= TABLE_MIN) throw new Error("top-up only when the bankroll cannot cover the table minimum");
-    bank.bankroll += TOP_UP;
+    if (bankroll >= TABLE_MIN) throw new Error("top-up only when the bankroll cannot cover the table minimum");
+    bankroll += TOP_UP;
   }
 
   function requireActive(): Hand {

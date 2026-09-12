@@ -67,22 +67,21 @@ export default function Game() {
 
   if (!state) return <main className="page" />;
 
-  const betCents = Math.round(Number(bet) * 100);
+  const betValue = Number(bet);
+  const betCents = Number.isInteger(betValue) ? betValue * 100 : -1;
   const canClaim =
     state.phase === "betting" &&
     state.spots.length < MAX_SPOTS &&
-    betCents >= 10_00 &&
+    betCents >= TABLE_MIN &&
     betCents <= TABLE_MAX &&
     state.bankroll >= betCents;
-
-  const insuranceCost = state.spots.reduce((sum, spot) => sum + Math.floor(spot.bet / 2), 0);
 
   return (
     <main className="page">
       <header className="bar">
         <span className="brand">Blackjack</span>
         <span className="bankroll">{money(state.bankroll)}</span>
-        {state.bankroll < 10_00 && (
+        {state.bankroll < TABLE_MIN && (
           <button className="btn" onClick={() => act(() => tableRef.current!.topUp())}>
             Top up {money(TOP_UP)}
           </button>
@@ -108,13 +107,13 @@ export default function Game() {
                 type="number"
                 min={10}
                 max={2000}
-                step={5}
+                step={1}
                 value={bet}
                 onChange={(e) => setBet(e.target.value)}
               />
             </label>
             <button className="btn" disabled={!canClaim} onClick={() => act(() => tableRef.current!.claim(betCents))}>
-              Add hand
+              Add spot
             </button>
             <button
               className="btn primary"
@@ -128,8 +127,12 @@ export default function Game() {
 
         {state.phase === "insurance" && (
           <div className="actions">
-            <span className="label">Insurance {money(insuranceCost)}?</span>
-            <button className="btn" onClick={() => act(() => tableRef.current!.insure())}>
+            <span className="label">Insurance {money(state.insuranceCost)}?</span>
+            <button
+              className="btn"
+              disabled={state.bankroll < state.insuranceCost}
+              onClick={() => act(() => tableRef.current!.insure())}
+            >
               Insure
             </button>
             <button className="btn" onClick={() => act(() => tableRef.current!.decline())}>
@@ -169,7 +172,7 @@ export default function Game() {
         {state.phase === "settled" && (
           <div className="actions">
             <button className="btn primary" onClick={() => act(() => tableRef.current!.nextRound())}>
-              Next hand
+              Next round
             </button>
           </div>
         )}

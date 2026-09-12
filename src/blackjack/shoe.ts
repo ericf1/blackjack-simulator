@@ -4,11 +4,14 @@ import { standardDeck } from "./cards";
 /**
  * The Shoe: an ordered pile of cards drawn from the top.
  * Injection rules (per tests + future simulator):
- * - `deck` given: the Shoe plays out that exact order (deterministic tests).
+ * - `deck` given: the Shoe plays out that exact order, and replays it on every
+ *   refresh — crossing the cut card never switches to a random shuffle
+ *   (deterministic tests).
  * - otherwise: `decks` full decks shuffled with the injected rng.
  */
 export class Shoe {
   private cards: Card[];
+  private readonly injected: Card[] | null;
   private drawn = 0;
   readonly total: number;
   readonly cutIndex: number;
@@ -18,7 +21,8 @@ export class Shoe {
     private readonly decks: number,
     private readonly rng: () => number = Math.random,
   ) {
-    this.cards = cards ?? shuffleN(standardDeck(), decks, rng);
+    this.injected = cards;
+    this.cards = cards ? [...cards] : shuffleN(standardDeck(), decks, rng);
     this.total = this.cards.length;
     this.cutIndex = Math.floor(this.total * 0.75);
   }
@@ -40,7 +44,7 @@ export class Shoe {
   }
 
   refresh(): void {
-    this.cards = shuffleN(standardDeck(), this.decks, this.rng);
+    this.cards = this.injected ? [...this.injected] : shuffleN(standardDeck(), this.decks, this.rng);
     this.drawn = 0;
   }
 }

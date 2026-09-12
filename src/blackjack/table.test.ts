@@ -206,6 +206,7 @@ test("table limits: five spots, $10–$2000 bets, bankroll cover", () => {
   expect(() => table.claim(1000)).toThrow(/at most 5 spots/);
   const fresh = createTable({ deck: [] });
   expect(() => fresh.claim(999)).toThrow();
+  expect(() => fresh.claim(1050)).toThrow(/whole dollars/);
   expect(() => fresh.claim(200001)).toThrow();
   expect(() => fresh.claim(200000)).toThrow(/insufficient bankroll/);
 });
@@ -267,6 +268,8 @@ test("cut card triggers a reshuffle before the next deal", () => {
   table.deal(); // must not throw: shoe refreshed past the cut
   expect(table.state.phase).toBe("playing");
   expect(table.state.needsShuffle).toBe(false);
+  table.stand();
+  expect(table.state.spots[0].hands[0].result).toBe("win"); // the replayed deck is the exact injected order
 });
 
 test("top-up refills a wiped-out bankroll", () => {

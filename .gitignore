@@ -3,9 +3,10 @@ node_modules/
 .next/
 out/
 *.tsbuildinfo
-next-env.d.ts# environment / secrets (not part of the project)
+next-env.d.ts
+.mcp.json
+# environment / secrets (not part of the project)
 .env
-
 .claude/
 id_rsa
 id_ed25519
