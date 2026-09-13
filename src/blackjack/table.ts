@@ -48,6 +48,14 @@ export interface SpotView {
   hands: HandView[];
 }
 
+/** One entry on the Dealer board (CONTEXT.md): the Dealer's final total for a settled Round. */
+export interface DealerBoardEntry {
+  /** Final total of the Dealer's revealed cards. */
+  total: number;
+  /** Two-card natural — shown as BJ rather than 21. */
+  natural: boolean;
+}
+
 export interface State {
   phase: Phase;
   /** The live Table rules (CONTEXT.md) — read by the UI, the strategy, and the simulator. */
@@ -57,6 +65,8 @@ export interface State {
   active: { spot: number; hand: number } | null;
   legal: Action[];
   dealer: { cards: Card[]; holeRevealed: boolean };
+  /** Dealer board (CONTEXT.md): the Session's running record of the Dealer's final totals, oldest first. */
+  dealerBoard: DealerBoardEntry[];
   shoeRemaining: number;
   needsShuffle: boolean;
   /** Total insurance premium for the current peek (nonzero only during the insurance phase). */
@@ -92,6 +102,7 @@ export function createTable(options: TableOptions = {}) {
   let insuranceBet = 0;
   let dealerHole: Card | null = null;
   let dealerCards: Card[] = [];
+  let dealerBoard: DealerBoardEntry[] = [];
 
   interface Spot {
     id: number;
@@ -113,6 +124,7 @@ export function createTable(options: TableOptions = {}) {
       active: active ? { ...active } : null,
       legal: active ? legalActions(active) : [],
       dealer: { cards: [...dealerCards], holeRevealed: dealerCards.length > 1 },
+      dealerBoard: [...dealerBoard],
       shoeRemaining: shoe.remaining,
       needsShuffle: shoe.pastCut,
       insuranceCost: phase === "insurance" ? insuranceCost() : 0,
@@ -292,6 +304,9 @@ export function createTable(options: TableOptions = {}) {
 
     // one sample per settled Round, taken after every payout
     history.push({ kind: "settle", round, bankroll });
+
+    // one Dealer board entry per settled Round (CONTEXT.md), including peek naturals
+    dealerBoard.push({ total: dealerTotal, natural: dealerBJ });
   }
 
   function hit(): void {
@@ -364,6 +379,9 @@ export function createTable(options: TableOptions = {}) {
   function nextRound(): void {
     assertPhase("settled");
     spots = [];
+    // the felt clears with the Spots — the Dealer's last hand lives on the board
+    dealerCards = [];
+    dealerHole = null;
     phase = "betting";
   }
 
@@ -394,6 +412,7 @@ export function createTable(options: TableOptions = {}) {
     insuranceBet = 0;
     dealerHole = null;
     dealerCards = [];
+    dealerBoard = [];
     shoe.refresh();
   }
 

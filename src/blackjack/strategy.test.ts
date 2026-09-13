@@ -34,6 +34,7 @@ function playing(player: Card[], up: Card, legal: Action[] = ALL): State {
     insuranceCost: 0,
     sessionStart: 100_00,
     history: [],
+    dealerBoard: [],
   };
 }
 
@@ -212,6 +213,7 @@ const betting = (bankroll: number, claimed: number[] = []): State => ({
   insuranceCost: 0,
   sessionStart: 100_00,
   history: [],
+  dealerBoard: [],
 });
 
 const settled = (): State => ({

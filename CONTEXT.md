@@ -40,6 +40,10 @@ _Avoid_: spot (that is the betting position), box
 One cycle of betting, dealing, playing, and settlement across all Spots.
 _Avoid_: game, turn, hand (ambiguous)
 
+**Dealer board**:
+The running record of the Dealer's final totals — one entry per settled Round: a total, BUST, or BJ for a natural — displayed at the table for the length of the Session.
+_Avoid_: log, feed, dealer history
+
 **Table rules**:
 The settings the Player can change between Rounds — whether Surrender is offered and the Blackjack payout (3:2 or 6:5). They persist across Sessions; every other rule of the table is fixed.
 _Avoid_: settings, house rules, preferences

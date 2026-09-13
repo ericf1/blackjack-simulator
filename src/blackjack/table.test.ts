@@ -240,6 +240,8 @@ test("nextRound clears the spots and keeps the bankroll", () => {
   table.nextRound();
   expect(table.state.phase).toBe("betting");
   expect(table.state.spots).toHaveLength(0);
+  expect(table.state.dealer.cards).toHaveLength(0); // the felt clears with the Spots
+  expect(table.state.dealerBoard).toEqual([{ total: 17, natural: false }]); // the board keeps it
   table.claim(1000);
   table.deal();
   expect(table.state.phase).toBe("playing");
@@ -383,6 +385,7 @@ test("resetSession starts a fresh Session", () => {
   expect(table.state.sessionStart).toBe(10000);
   expect(table.state.history).toEqual([]);
   expect(table.state.spots).toHaveLength(0);
+  expect(table.state.dealerBoard).toEqual([]); // the board lives for one Session
   expect(table.state.shoeRemaining).toBe(260); // fresh shoe
 });
 
@@ -457,6 +460,54 @@ test("a no-surrender table never offers the action and refuses it", () => {
   table.stand(); // 16 loses to 17 — the round plays on normally
   expect(table.state.spots[0].hands[0].result).toBe("lose");
   expect(table.state.bankroll).toBe(9000);
+});
+
+// ---- Slice 10: Dealer board (CONTEXT.md) ------------------------------------
+
+test("the Dealer board records each settled Round and survives nextRound", () => {
+  // two rounds of the same rig: dealer 10+7 stands on 17
+  const round = [S("10"), H("10"), S("K"), H("7")];
+  const table = createTable({ deck: [...round, ...round] });
+  table.claim(1000);
+  table.deal();
+  table.stand();
+  expect(table.state.dealerBoard).toEqual([{ total: 17, natural: false }]);
+  table.nextRound();
+  table.claim(1000);
+  table.deal();
+  table.stand();
+  expect(table.state.dealerBoard).toEqual([
+    { total: 17, natural: false },
+    { total: 17, natural: false },
+  ]);
+});
+
+test("the Dealer board marks dealer busts and two-card naturals", () => {
+  // P1 stands on 20; dealer 9+6=15 draws the 7 → 22
+  const bust = createTable({ deck: [S("10"), S("9"), S("K"), S("6"), S("7")] });
+  bust.claim(1000);
+  bust.deal();
+  bust.stand();
+  expect(bust.state.dealerBoard).toEqual([{ total: 22, natural: false }]);
+
+  // dealer peek finds A+Q → natural, before any hand is played
+  const natural = createTable({ deck: [S("10"), S("A"), S("K"), S("Q")] });
+  natural.claim(1000);
+  natural.deal();
+  natural.decline(); // the insurance offer is declined; the peek settles
+  expect(natural.state.phase).toBe("settled");
+  expect(natural.state.dealerBoard).toEqual([{ total: 21, natural: true }]);
+});
+
+test("a Round the Dealer never plays records the revealed two-card total", () => {
+  // P1 busts on the hit; dealer reveals 2+3=5 and never draws
+  const table = createTable({ deck: [S("10"), S("2"), S("9"), S("3"), S("8")] });
+  table.claim(1000);
+  table.deal();
+  table.hit(); // 19 + 8 = 27
+  expect(table.state.spots[0].hands[0].result).toBe("bust");
+  expect(table.state.dealer.cards).toHaveLength(2);
+  expect(table.state.dealerBoard).toEqual([{ total: 5, natural: false }]);
 });
 
 test("setRules applies between rounds and is locked mid-round", () => {

@@ -179,6 +179,55 @@ button:disabled {
   white-space: nowrap;
 }
 
+/* Dealer board (CONTEXT.md): newest first; each entry drifts right and fades with age. */
+.dealer-board {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.dealer-board-entry {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--plate);
+  white-space: nowrap;
+  opacity: calc(1 - var(--age, 0) * 0.1);
+  transition: opacity 400ms ease;
+  animation: board-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.dealer-board-entry.newest {
+  border-color: var(--line-2);
+  color: var(--ink);
+}
+
+.dealer-board-entry.bust {
+  color: var(--red);
+}
+
+.dealer-board-entry.bj {
+  color: var(--accent);
+}
+
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dealer-board-entry {
+    animation: none;
+  }
+}
+
 .shoe {
   margin-left: auto;
   display: flex;
@@ -1063,6 +1112,11 @@ button:disabled {
     min-width: 0;
   }
 
+  /* The board shows the newest few; on small screens the row belongs to the cards. */
+  .dealer-board-entry:nth-child(n + 5) {
+    display: none;
+  }
+
   .spots-stretch > .plate {
     min-height: 178px;
   }
@@ -1124,6 +1178,19 @@ button:disabled {
   .dealer-row {
     gap: 10px;
     padding: 14px 0 12px;
+  }
+
+  .dealer-board {
+    gap: 4px;
+  }
+
+  .dealer-board-entry {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .dealer-board-entry:nth-child(n + 4) {
+    display: none;
   }
 
   .table-label {

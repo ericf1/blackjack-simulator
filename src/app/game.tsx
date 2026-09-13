@@ -219,6 +219,31 @@ function HandTotal({ cards }: { cards: Card[] }) {
   return <span className="total">{soft && total < 21 ? `${total - 10}/${total}` : total}</span>;
 }
 
+const BOARD_VISIBLE = 10; // newest entries kept on the board; older ones age out
+
+/**
+ * Dealer board (CONTEXT.md): the Dealer's final totals for settled Rounds,
+ * newest first — each new result enters at the left and drifts right, fading
+ * as it ages, until it drops off the end.
+ */
+function DealerBoard({ entries }: { entries: State["dealerBoard"] }) {
+  if (entries.length === 0) return null;
+  const visible = entries.slice(-BOARD_VISIBLE).reverse();
+  return (
+    <div className="dealer-board" aria-label="Dealer board">
+      {visible.map((entry, age) => (
+        <span
+          key={entries.length - 1 - age}
+          className={`dealer-board-entry${entry.natural ? " bj" : entry.total > 21 ? " bust" : ""}${age === 0 ? " newest" : ""}`}
+          style={{ "--age": age } as React.CSSProperties}
+        >
+          {entry.natural ? "BJ" : entry.total > 21 ? "BUST" : entry.total}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 const VERBS = [
   { action: "hit", label: "Hit" },
   { action: "stand", label: "Stand" },
@@ -443,6 +468,7 @@ export default function Game() {
               })()}
             </span>
           )}
+          <DealerBoard entries={state.dealerBoard} />
         </div>
         <div className="shoe-ruler" role="img" aria-label={`Shoe: ${shoeRemaining} of ${SHOE_TOTAL} cards remain`}>
           <div className="shoe-ruler-head">
