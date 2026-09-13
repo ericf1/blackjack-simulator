@@ -191,7 +191,7 @@ Two radius families only: **objects** (cards 7px, hands 8px, controls 9px, plate
 
 ### Buttons (verb bar / tray)
 - **Shape:** 9px radius, 1px border, `13px 20px` padding, label typography (uppercase, 600).
-- **Primary:** Cobalt fill, white text; hover presses to `#1732a0`; disabled at 35% opacity.
+- **Primary:** Cobalt fill, white text; hover presses to `#1732a0`; disabled at 35% opacity — while Autopilot holds the table, disabled buttons keep 65% (ghost plates 55%) so the control it is about to press stays readable.
 - **Secondary:** Plate fill, `--line-2` border; hover darkens the border to Ink; active nudges down 1px.
 - **Top-up:** transparent pill, 1px cobalt border, cobalt text; hover fills cobalt.
 

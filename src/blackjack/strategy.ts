@@ -116,3 +116,12 @@ export function autopilotCommand(state: State, lineup: number[]): Command | null
       return "nextRound";
   }
 }
+
+/**
+ * Whether Autopilot may run at all — the same coverage rule autopilotCommand
+ * uses to stop (empty Lineup, or a Bankroll that cannot cover it). The UI
+ * gates its button on this instead of re-deriving the rule.
+ */
+export function autopilotCanRun(state: State, lineup: number[]): boolean {
+  return autopilotCommand(state, lineup) !== null;
+}

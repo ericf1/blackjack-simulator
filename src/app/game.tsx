@@ -13,7 +13,7 @@ import {
   type Table,
 } from "@/blackjack/table";
 import { loadBankroll, saveBankroll } from "./lib/bankroll-store";
-import { autopilotCommand, type Command } from "@/blackjack/strategy";
+import { autopilotCanRun, autopilotCommand, type Command } from "@/blackjack/strategy";
 
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -239,7 +239,7 @@ export default function Game() {
   const roundStartRef = useRef<number | null>(null);
   const [autopilot, setAutopilot] = useState(false);
   const [lineup, setLineup] = useState<number[]>([]);
-  const [botPress, setBotPress] = useState<Command | null>(null);
+  const [press, setPress] = useState<Command | null>(null);
 
   // Follow the active hand on the mobile plate carousel (no-op on desktop grid).
   useEffect(() => {
@@ -275,7 +275,7 @@ export default function Game() {
     if (state) saveBankroll(window.localStorage, state.bankroll);
   }, [state?.bankroll]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // One claim path for human and bot: the round's P/L baseline is the bankroll
+  // One claim path for human and Autopilot: the round's P/L baseline is the bankroll
   // before the first claim of the Round (the stake is deducted at claim time).
   const runClaim = (bet: number) => {
     const table = tableRef.current!;
@@ -315,26 +315,26 @@ export default function Game() {
 
   const stopAutopilot = () => {
     setAutopilot(false);
-    setBotPress(null);
+    setPress(null);
   };
 
   useEffect(() => {
     if (!autopilot || !state) return;
-    if (!botPress) {
+    if (!press) {
       const cmd = autopilotCommand(state, lineup);
       if (!cmd) {
         setAutopilot(false); // bankroll cannot cover the Lineup — the human's move
         return;
       }
-      const t = setTimeout(() => setBotPress(cmd), STEP_MS);
+      const t = setTimeout(() => setPress(cmd), STEP_MS);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => {
-      setBotPress(null);
-      dispatch(botPress);
+      setPress(null);
+      dispatch(press);
     }, PRESS_MS);
     return () => clearTimeout(t);
-  }, [state, autopilot, botPress, lineup]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state, autopilot, press, lineup]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const act = (fn: () => void) => {
     fn();
@@ -356,7 +356,8 @@ export default function Game() {
   // Autopilot runs the Lineup: claimed Spots now, or the remembered one.
   const pendingLineup = state.spots.length > 0 ? state.spots.map((spot) => spot.bet) : lineup;
   const lineupTotal = pendingLineup.reduce((sum, bet) => sum + bet, 0);
-  const canAutopilot = pendingLineup.length > 0 && state.bankroll >= lineupTotal;
+  // The module owns the coverage rule; the UI only asks it.
+  const canAutopilot = autopilotCanRun(state, pendingLineup);
 
   const shoeRemaining = state.shoeRemaining;
   const shoePct = Math.max(0, Math.min(100, (shoeRemaining / SHOE_TOTAL) * 100));
@@ -456,12 +457,12 @@ export default function Game() {
           {state.phase === "betting" &&
             Array.from({ length: MAX_SPOTS - state.spots.length }, (_, gi) => {
               const claimAmount = autopilot ? (lineup[state.spots.length] ?? 0) : betCents;
-              const botPressingClaim =
-                botPress !== null && typeof botPress !== "string" && gi === state.spots.length;
+              const pressingClaim =
+                press !== null && typeof press !== "string" && gi === state.spots.length;
               return (
                 <button
                   key={`ghost-${gi}`}
-                  className={`plate plate-ghost plate-engraved${botPressingClaim ? " bot-press" : ""}`}
+                  className={`plate plate-ghost plate-engraved${pressingClaim ? " auto-press" : ""}`}
                   disabled={autopilot || !canClaim}
                   aria-label={`Claim spot for ${moneyWhole(claimAmount > 0 ? claimAmount : 0)}`}
                   onClick={() => runClaim(betCents)}
@@ -541,7 +542,7 @@ export default function Game() {
                     Autopilot
                   </button>
                   <button
-                    className={`btn primary${botPress === "deal" ? " bot-press" : ""}`}
+                    className={`btn primary${press === "deal" ? " auto-press" : ""}`}
                     disabled={state.spots.length === 0 || autopilot}
                     onClick={() => act(() => tableRef.current!.deal())}
                   >
@@ -561,7 +562,7 @@ export default function Game() {
             </p>
           )}
 
-          {!autopilot && state.phase === "betting" && state.spots.length === 0 && lineup.length > 0 && state.bankroll < lineupTotal && (
+          {!autopilot && state.phase === "betting" && state.spots.length === 0 && lineup.length > 0 && !autopilotCanRun(state, lineup) && (
             <p className="tray-note" style={{ margin: "6px 0 0" }}>
               The bankroll can&apos;t cover the Autopilot lineup ({moneyWhole(lineupTotal)}).
             </p>
@@ -581,7 +582,7 @@ export default function Game() {
                 Insure
               </button>
               <button
-                className={`btn primary${botPress === "decline" ? " bot-press" : ""}`}
+                className={`btn primary${press === "decline" ? " auto-press" : ""}`}
                 disabled={autopilot}
                 onClick={() => act(() => tableRef.current!.decline())}
               >
@@ -606,7 +607,7 @@ export default function Game() {
                 return (
                   <button
                     key={verb.action}
-                    className={`btn${verb.action === "hit" ? " primary" : ""}${botPress === verb.action ? " bot-press" : ""}`}
+                    className={`btn${verb.action === "hit" ? " primary" : ""}${press === verb.action ? " auto-press" : ""}`}
                     disabled={!legal || autopilot}
                     onClick={() => act(() => tableRef.current![verb.action]())}
                   >
@@ -635,7 +636,7 @@ export default function Game() {
                 })()}
               <span className="tray-spacer" />
               <button
-                className={`btn primary${botPress === "nextRound" ? " bot-press" : ""}`}
+                className={`btn primary${press === "nextRound" ? " auto-press" : ""}`}
                 disabled={autopilot}
                 onClick={() => {
                   roundStartRef.current = null;

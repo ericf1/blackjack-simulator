@@ -733,6 +733,7 @@ button:disabled {
 .tray-note {
   font-size: 12px;
   color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
 }
 
 .tray-note.invalid {
@@ -1061,17 +1062,14 @@ button:disabled {
   color: var(--accent);
 }
 
-.btn.stop {
+/* Stop borrows the release affordance: a quiet control that turns vermilion only on hover. */
+.btn.stop:hover:not(:disabled) {
   background: var(--red);
   border-color: var(--red);
   color: #fff;
 }
 
-.btn.stop:hover:not(:disabled) {
-  filter: brightness(0.88);
-}
-
-/* The bot presses the real controls: keep them readable while held. */
+/* Autopilot presses the real controls: keep them readable while held. */
 .autopilot .btn:disabled {
   opacity: 0.65;
 }
@@ -1080,8 +1078,8 @@ button:disabled {
   opacity: 0.55;
 }
 
-.btn.bot-press,
-.plate.bot-press {
+.btn.auto-press,
+.plate.auto-press {
   transform: translateY(1px) scale(0.97);
   filter: brightness(0.92);
 }
