@@ -1506,8 +1506,78 @@ button:disabled {
   margin: 14px 0 0;
 }
 
+/* ---- Speed: bar readout, button, modal slider (CONTEXT.md: Speed) --------- */
+
+.speed-btn {
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.speed-btn:hover {
+  color: var(--accent);
+}
+
+.speed-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 150px;
+  height: 26px;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.speed-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-2);
+}
+
+.speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--plate);
+  margin-top: -6px;
+}
+
+.speed-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-2);
+}
+
+.speed-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--plate);
+}
+
+.speed-readout {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+  text-align: right;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gear-btn,
+  .speed-btn,
   .seg-btn,
   .switch,
   .switch .knob {

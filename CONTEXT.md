@@ -16,6 +16,10 @@ _Avoid_: house, casino, bank
 The mode in which the Player's decisions are made automatically by Basic strategy — betting, dealing, playing, and settling all happen on their own while the human watches. The human can always stop it; Top-up stays the human's job.
 _Avoid_: autoplay, bot, demo mode, AI
 
+**Speed**:
+How quickly Autopilot takes each action — the human's viewing preference for the show. It changes how long each step takes, never which step is taken, and is not a Table rule.
+_Avoid_: pace, tempo, game speed
+
 **Lineup**:
 The set of Spots — their count and bets — that Autopilot plays. The human sets it before starting; Autopilot re-claims it unchanged at the start of every Round until the human sets up a new one.
 _Avoid_: setup, configuration, preset, bet spread

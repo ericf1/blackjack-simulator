@@ -15,6 +15,14 @@ import {
 } from "@/blackjack/table";
 import { loadBankroll, saveBankroll } from "./lib/bankroll-store";
 import { loadRules, saveRules } from "./lib/rules-store";
+import {
+  loadSpeed,
+  saveSpeed,
+  DEFAULT_SPEED,
+  SPEED_MAX,
+  SPEED_MIN,
+  SPEED_STEP,
+} from "./lib/speed-store";
 import { money, moneyWhole } from "./lib/format";
 import { autopilotCanRun, autopilotCommand, type Command } from "@/blackjack/strategy";
 import BankrollChart from "./bankroll-chart";
@@ -252,8 +260,8 @@ const VERBS = [
   { action: "surrender", label: "Surrender" },
 ] as const;
 
-const STEP_MS = 600; // Autopilot: think delay before the click
-const PRESS_MS = 220; // Autopilot: how long the pressed state shows
+const STEP_MS = 600; // Autopilot: think delay before the click, at 1× Speed
+const PRESS_MS = 220; // Autopilot: how long the pressed state shows, at 1× Speed
 
 export default function Game() {
   const tableRef = useRef<ReturnType<typeof createTable> | null>(null);
@@ -267,6 +275,9 @@ export default function Game() {
   const [lineup, setLineup] = useState<number[]>([]);
   const [press, setPress] = useState<Command | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [speed, setSpeed] = useState(DEFAULT_SPEED);
+  const [speedOpen, setSpeedOpen] = useState(false);
+  const speedBootedRef = useRef(false);
 
   // Follow the active hand on the mobile plate carousel (no-op on desktop grid).
   useEffect(() => {
@@ -299,6 +310,7 @@ export default function Game() {
     });
     tableRef.current = table;
     setState(table.state);
+    setSpeed(loadSpeed(window.localStorage));
   }, []);
 
   useEffect(() => {
@@ -310,15 +322,35 @@ export default function Game() {
     if (state) saveRules(window.localStorage, state.rules);
   }, [state?.rules.surrender, state?.rules.blackjackPayout]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Esc closes the Table rules modal.
+  // Speed persists like the Bankroll (ADR-0001). The first commit holds the
+  // boot default, not the user's value — the save skips that one run.
   useEffect(() => {
-    if (!rulesOpen) return;
+    if (!speedBootedRef.current) {
+      speedBootedRef.current = true;
+      return;
+    }
+    saveSpeed(window.localStorage, speed);
+  }, [speed]);
+
+  // The Speed modal belongs to a running Autopilot: the bar that opens it only
+  // exists while Autopilot runs, so a self-stopped Autopilot (Out of money)
+  // must not resurrect the modal at the next start.
+  useEffect(() => {
+    if (!autopilot) setSpeedOpen(false);
+  }, [autopilot]);
+
+  // Esc closes the Table rules and Speed modals.
+  useEffect(() => {
+    if (!rulesOpen && !speedOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setRulesOpen(false);
+      if (e.key === "Escape") {
+        setRulesOpen(false);
+        setSpeedOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [rulesOpen]);
+  }, [rulesOpen, speedOpen]);
 
   // One claim path for human and Autopilot: the round's P/L baseline is the bankroll
   // before the first claim of the Round (the stake is deducted at claim time).
@@ -379,15 +411,15 @@ export default function Game() {
         setPress(cmd);
         return;
       }
-      const t = setTimeout(() => setPress(cmd), STEP_MS);
+      const t = setTimeout(() => setPress(cmd), STEP_MS / speed);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => {
       setPress(null);
       dispatch(press);
-    }, PRESS_MS);
+    }, PRESS_MS / speed);
     return () => clearTimeout(t);
-  }, [state, autopilot, press, lineup]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state, autopilot, press, lineup, speed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const act = (fn: () => void) => {
     fn();
@@ -736,7 +768,20 @@ export default function Game() {
           {autopilot && (
             <div className="tray-content autopilot-bar">
               <span className="autopilot-dot" aria-hidden="true" />
-              <span className="autopilot-label">Autopilot</span>
+              <span className="autopilot-label">Autopilot · {speed}×</span>
+              <button className="speed-btn" aria-label="Speed" title="Speed" onClick={() => setSpeedOpen(true)}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="4" y1="21" x2="4" y2="14" />
+                  <line x1="4" y1="10" x2="4" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12" y2="3" />
+                  <line x1="20" y1="21" x2="20" y2="16" />
+                  <line x1="20" y1="12" x2="20" y2="3" />
+                  <line x1="1" y1="14" x2="7" y2="14" />
+                  <line x1="9" y1="8" x2="15" y2="8" />
+                  <line x1="17" y1="16" x2="23" y2="16" />
+                </svg>
+              </button>
               <span className="tray-spacer" />
               <button className="btn stop" onClick={stopAutopilot}>
                 Stop
@@ -802,6 +847,46 @@ export default function Game() {
             <p className="modal-hint">
               Late surrender forfeits half the bet on the first two cards. 6:5 pays less on naturals — a worse deal for
               the Player. Basic strategy follows the table either way.
+            </p>
+          </section>
+        </div>
+      )}
+      {autopilot && speedOpen && (
+        <div className="modal-backdrop" onClick={() => setSpeedOpen(false)}>
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Speed"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="modal-head">
+              <h2 className="modal-title">Speed</h2>
+              <button className="modal-close" aria-label="Close speed" onClick={() => setSpeedOpen(false)}>
+                ×
+              </button>
+            </header>
+            <p className="modal-note">
+              Autopilot&apos;s Speed — it changes how long each action takes, never which action is taken. Remembered on
+              this device.
+            </p>
+            <div className="modal-row">
+              <span className="modal-label">Speed</span>
+              <input
+                className="speed-slider"
+                type="range"
+                min={SPEED_MIN}
+                max={SPEED_MAX}
+                step={SPEED_STEP}
+                value={speed}
+                aria-label="Speed"
+                onChange={(e) => setSpeed(Number(e.target.value))}
+              />
+              <span className="speed-readout">{speed}×</span>
+            </div>
+            <p className="modal-hint">
+              About {((STEP_MS + PRESS_MS) / 1000 / speed).toFixed(1)} seconds per action. Drag while Autopilot runs —
+              the very next action keeps the new beat.
             </p>
           </section>
         </div>
