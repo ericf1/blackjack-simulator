@@ -1256,6 +1256,7 @@ button:disabled {
   font-size: 10.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-2);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -1401,7 +1402,7 @@ button:disabled {
   height: 26px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: #d8d5cc;
+  background: var(--line-2);
   cursor: pointer;
   padding: 0;
   transition: background 140ms ease, border-color 140ms ease;
@@ -1415,13 +1416,12 @@ button:disabled {
   height: 20px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(23, 24, 27, 0.3);
   transition: transform 140ms ease;
 }
 
 .switch.on {
-  background: var(--win);
-  border-color: var(--win);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .switch.on .knob {
