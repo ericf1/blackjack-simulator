@@ -18,6 +18,7 @@
   --chip-purple: #6c3fa4;
   --card-w: 64px;
   --radius: 10px;
+  --gutter: max(clamp(16px, 4vw, 40px), env(safe-area-inset-left), env(safe-area-inset-right));
   --font-display: "Bricolage Grotesque";
   --font-body: "Archivo";
 }
@@ -57,6 +58,9 @@ button {
   border: none;
   padding: 0;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 button:disabled {
@@ -67,7 +71,7 @@ button:disabled {
   max-width: 1080px;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 18px clamp(16px, 4vw, 40px) 0;
+  padding: 18px var(--gutter) 0;
   display: flex;
   flex-direction: column;
 }
@@ -171,6 +175,8 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--plate);
+  flex: none;
+  white-space: nowrap;
 }
 
 .shoe {
@@ -234,6 +240,8 @@ button:disabled {
   position: relative;
   color: var(--ink);
   flex: none;
+  /* Card craft is drawn in container units so it scales with the card stock. */
+  container-type: inline-size;
 }
 
 .card.red {
@@ -243,8 +251,11 @@ button:disabled {
 .idx {
   position: absolute;
   top: 5px;
+  top: 7.8cqw;
   left: 6px;
+  left: 9.4cqw;
   font-size: 11px;
+  font-size: 17.2cqw;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -258,19 +269,23 @@ button:disabled {
   top: auto;
   left: auto;
   right: 6px;
+  right: 9.4cqw;
   bottom: 5px;
+  bottom: 7.8cqw;
   transform: rotate(180deg);
 }
 
 .pip-area {
   position: absolute;
   inset: 16px 18%;
+  inset: 25cqw 18%;
 }
 
 .pip {
   position: absolute;
   transform: translate(-50%, -50%);
   font-size: 15px;
+  font-size: 23.4cqw;
   line-height: 1;
 }
 
@@ -280,6 +295,7 @@ button:disabled {
 
 .pip.ace {
   font-size: 34px;
+  font-size: 53.1cqw;
 }
 
 .court {
@@ -295,12 +311,14 @@ button:disabled {
 .court-letter {
   font-family: var(--font-display), var(--font-body), sans-serif;
   font-size: 25px;
+  font-size: 39.1cqw;
   font-weight: 700;
   line-height: 1;
 }
 
 .court-suit {
   font-size: 15px;
+  font-size: 23.4cqw;
   line-height: 1;
 }
 
@@ -312,10 +330,15 @@ button:disabled {
   content: "";
   position: absolute;
   inset: 5px;
+  inset: 7.8cqw;
   border-radius: 4px;
+  border-radius: 6.3cqw;
   background:
     repeating-linear-gradient(45deg, transparent 0 5px, rgb(43 79 168 / 0.45) 5px 6px),
     repeating-linear-gradient(135deg, transparent 0 5px, rgb(43 79 168 / 0.45) 5px 6px);
+  background:
+    repeating-linear-gradient(45deg, transparent 0 7.8cqw, rgb(43 79 168 / 0.45) 7.8cqw 9.4cqw),
+    repeating-linear-gradient(135deg, transparent 0 7.8cqw, rgb(43 79 168 / 0.45) 7.8cqw 9.4cqw);
 }
 
 .deal {
@@ -400,6 +423,7 @@ button:disabled {
   color: var(--ink-2);
   font-size: 13px;
   line-height: 1;
+  position: relative;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
@@ -569,6 +593,85 @@ button:disabled {
   100% {
     transform: scale(1);
   }
+}
+
+/* ---- stretched spots + engraved plates ---- */
+
+.spots-stretch {
+  flex: 1;
+  min-height: 0;
+  align-content: center;
+}
+
+.spots-stretch > .plate {
+  min-height: 240px;
+}
+
+.shoe-ruler {
+  padding: 16px 0 4px;
+}
+
+.shoe-ruler-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.shoe-ruler-bar {
+  position: relative;
+  height: 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(20% - 1px), var(--line) calc(20% - 1px), var(--line) 20%);
+}
+
+.shoe-ruler-fill {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  right: 1px;
+  background: var(--ink);
+  border-radius: 2px 0 0 2px;
+}
+
+.shoe-ruler-tick {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 2px;
+  right: 25%;
+  background: var(--accent);
+}
+
+.plate-engraved {
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 14px 14px 16px;
+  text-align: left;
+}
+
+.plate-engraved .claim-hint {
+  margin-top: 9px;
+}
+
+.plate-num {
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  font-weight: 700;
+  font-size: 56px;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  color: var(--line-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.plate-slot {
+  height: 36px;
+  margin-top: auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
 }
 
 /* ---- action tray ---- */
@@ -771,9 +874,11 @@ button:disabled {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     padding: 20px 0 12px;
-    margin: 0 calc(-1 * clamp(16px, 4vw, 40px));
-    padding-left: clamp(16px, 4vw, 40px);
-    padding-right: clamp(16px, 4vw, 40px);
+    margin: 0 calc(-1 * var(--gutter));
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+    scroll-padding-left: var(--gutter);
+    scroll-padding-right: var(--gutter);
     scrollbar-width: none;
   }
 
@@ -788,15 +893,58 @@ button:disabled {
     min-height: 178px;
   }
 
+  /* Dormant plates carry nothing to play — they are not snap destinations. */
+  .plate-dormant {
+    scroll-snap-align: none;
+  }
+
+  /* The dealer hand fans to fit whatever room the row has left. */
+  .dealer-row .cards {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .spots-stretch > .plate {
+    min-height: 178px;
+  }
+
+  .plate-num {
+    font-size: 44px;
+  }
+
   .tray {
     position: sticky;
     bottom: 0;
     z-index: 5;
     background: var(--stage);
-    margin: 0 calc(-1 * clamp(16px, 4vw, 40px));
-    padding: 12px clamp(16px, 4vw, 40px) max(14px, env(safe-area-inset-bottom));
+    margin: 0 calc(-1 * var(--gutter));
+    padding: 12px var(--gutter) max(14px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--line-2);
     box-shadow: 0 -12px 24px -18px rgb(23 24 27 / 0.35);
+  }
+}
+
+/* Short landscape phones: tighten the ritual so verbs stay within one scroll. */
+@media (max-width: 900px) and (max-height: 500px) {
+  .strip {
+    padding: 6px 0 10px;
+  }
+
+  .dealer-row {
+    padding: 10px 0 12px;
+  }
+
+  .spots {
+    padding-top: 12px;
+  }
+
+  .plate,
+  .spots-stretch > .plate {
+    min-height: 150px;
+  }
+
+  .plate-num {
+    font-size: 36px;
   }
 }
 
@@ -826,6 +974,32 @@ button:disabled {
     width: 104px;
   }
 
+  .card {
+    box-shadow:
+      0 1px 2px rgb(23 24 27 / 0.14),
+      0 8px 18px -12px rgb(23 24 27 / 0.28);
+  }
+
+  .hand-meta {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  /* Verbs read as an even grid: note row, then 3 + 2 buttons. */
+  .tray-content {
+    gap: 9px;
+  }
+
+  .tray-content .tray-note {
+    flex-basis: 100%;
+  }
+
+  .tray-content .btn {
+    flex: 1 1 30%;
+    min-width: 0;
+    padding: 13px 6px;
+  }
+
   .btn {
     padding: 12px 15px;
     font-size: 11.5px;
@@ -833,6 +1007,21 @@ button:disabled {
 
   .placard {
     font-size: 9px;
+  }
+}
+
+/* Touch targets: chips and release affordances grow to thumb size. */
+@media (pointer: coarse) {
+  .chip-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 11px;
+  }
+
+  .release::after {
+    content: "";
+    position: absolute;
+    inset: -11px;
   }
 }
 

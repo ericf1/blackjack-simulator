@@ -110,7 +110,7 @@ function PlayingCard({
   const label = `${card.rank === "A" ? "Ace" : card.rank} of ${SUIT_NAME[card.suit]}`;
   const pips = PIPS[card.rank];
   return (
-    <div className={`card deal${flip ? " flip" : ""}`} style={style} role="img" aria-label={label}>
+    <div className={`card deal${flip ? " flip" : ""}${red ? " red" : ""}`} style={style} role="img" aria-label={label}>
       <span className="idx">
         <span>{card.rank}</span>
         <span>{GLYPH[card.suit]}</span>
@@ -153,8 +153,20 @@ function fanPitch(width: number, count: number, cardW: number): number {
   return Math.max(0, Math.min(natural, (width - cardW) / (count - 1)));
 }
 
-/** A hand's cards, fanned to fit the hand: no card is ever clipped. */
-function HandRow({ cards }: { cards: Card[] }) {
+/**
+ * A hand's cards, fanned to fit the row: no card is ever clipped. Also serves
+ * the Dealer row — `extraFaceDown` appends the hidden hole card, `flipIndex`
+ * marks the card that flips on reveal.
+ */
+function HandRow({
+  cards,
+  extraFaceDown = 0,
+  flipIndex,
+}: {
+  cards: Card[];
+  extraFaceDown?: number;
+  flipIndex?: number;
+}) {
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [box, setBox] = useState({ width: 0, cardW: 0 });
 
@@ -169,10 +181,12 @@ function HandRow({ cards }: { cards: Card[] }) {
     return () => ro.disconnect();
   }, []);
 
+  const total = cards.length + extraFaceDown;
   const overlap =
-    box.cardW > 0 && cards.length > 1
-      ? fanPitch(box.width, cards.length, box.cardW) - (box.cardW + CARD_GAP)
+    box.cardW > 0 && total > 1
+      ? fanPitch(box.width, total, box.cardW) - (box.cardW + CARD_GAP)
       : 0;
+  const marginFor = (i: number) => (i > 0 ? { marginLeft: overlap } : undefined);
 
   return (
     <div className="cards" ref={rowRef}>
@@ -181,7 +195,16 @@ function HandRow({ cards }: { cards: Card[] }) {
           key={`${card.rank}${card.suit}-${ci}`}
           card={card}
           index={ci}
-          style={ci > 0 ? { marginLeft: overlap } : undefined}
+          flip={flipIndex === ci}
+          style={marginFor(ci)}
+        />
+      ))}
+      {Array.from({ length: extraFaceDown }, (_, i) => (
+        <div
+          key={`back-${i}`}
+          className="card back deal"
+          style={{ "--i": cards.length + i, ...marginFor(cards.length + i) } as React.CSSProperties}
+          aria-label="Face-down card"
         />
       ))}
     </div>
@@ -204,9 +227,36 @@ const VERBS = [
 
 export default function Game() {
   const tableRef = useRef<ReturnType<typeof createTable> | null>(null);
+  const spotsRef = useRef<HTMLDivElement | null>(null);
+  const activePlateRef = useRef<HTMLDivElement | null>(null);
+  const prevPhaseRef = useRef<string | null>(null);
   const [state, setState] = useState<State | null>(null);
   const [bet, setBet] = useState("10");
   const roundStartRef = useRef<number | null>(null);
+
+  // Follow the active hand on the mobile plate carousel (no-op on desktop grid).
+  useEffect(() => {
+    const el = activePlateRef.current;
+    if (!el) return;
+    el.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "nearest",
+      inline: "start",
+    });
+  }, [state?.active?.spot, state?.active?.hand]);
+
+  // When a settled round rolls into betting, bring the carousel back to Spot 1.
+  useEffect(() => {
+    if (!state) return;
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = state.phase;
+    if (prev === "settled" && state.phase === "betting") {
+      spotsRef.current?.scrollTo({
+        left: 0,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      });
+    }
+  }, [state?.phase]);
 
   useEffect(() => {
     const table = createTable({ bankroll: loadBankroll(window.localStorage) });
@@ -257,17 +307,11 @@ export default function Game() {
       <section className="table" aria-label="Blackjack table">
         <div className="dealer-row">
           <span className="table-label">Dealer</span>
-          <div className="cards">
-            {state.dealer.cards.map((card, i) => (
-              <PlayingCard
-                key={`${card.rank}${card.suit}-${i}`}
-                card={card}
-                index={i}
-                flip={state.dealer.holeRevealed && i === 1}
-              />
-            ))}
-            {!state.dealer.holeRevealed && <div className="card back deal" style={{ "--i": 1 } as React.CSSProperties} aria-label="Face-down card" />}
-          </div>
+          <HandRow
+            cards={state.dealer.cards}
+            extraFaceDown={state.dealer.holeRevealed ? 0 : 1}
+            flipIndex={state.dealer.holeRevealed ? 1 : undefined}
+          />
           {state.dealer.holeRevealed && state.dealer.cards.length > 0 && (
             <span className="dealer-total">
               {(() => {
@@ -276,22 +320,24 @@ export default function Game() {
               })()}
             </span>
           )}
-          <div className="shoe">
+        </div>
+        <div className="shoe-ruler" role="img" aria-label={`Shoe: ${shoeRemaining} of ${SHOE_TOTAL} cards remain`}>
+          <div className="shoe-ruler-head">
             <span className={`shoe-label${state.needsShuffle ? " cut" : ""}`}>
               {state.needsShuffle ? "Cut card · fresh shoe next round" : `Shoe ${shoeRemaining} cards`}
             </span>
-            <div className="shoe-bar" role="img" aria-label={`Shoe: ${shoeRemaining} of ${SHOE_TOTAL} cards remain`}>
-              <div className="shoe-fill" style={{ width: `${shoePct}%` }} />
-              <div className="shoe-tick" />
-            </div>
+            <span className="table-label">Cut card at 75%</span>
+          </div>
+          <div className="shoe-ruler-bar">
+            <div className="shoe-ruler-fill" style={{ width: `${shoePct}%` }} />
+            <div className="shoe-ruler-tick" />
           </div>
         </div>
-
-        <div className="spots">
+        <div className="spots spots-stretch" ref={spotsRef}>
           {state.spots.map((spot, si) => {
             const isActiveSpot = state.active?.spot === spot.id;
             return (
-              <div className="plate" key={spot.id}>
+              <div className="plate" key={spot.id} ref={isActiveSpot ? activePlateRef : undefined}>
                 <div className="plate-head">
                   <span className="plate-tag">Spot {si + 1}</span>
                   {state.phase === "betting" ? (
@@ -337,12 +383,14 @@ export default function Game() {
             Array.from({ length: MAX_SPOTS - state.spots.length }, (_, gi) => (
               <button
                 key={`ghost-${gi}`}
-                className="plate plate-ghost"
+                className="plate plate-ghost plate-engraved"
                 disabled={!canClaim}
                 aria-label={`Claim spot for ${moneyWhole(betCents > 0 ? betCents : 0)}`}
                 onClick={() => act(() => tableRef.current!.claim(betCents))}
               >
                 <span className="plate-tag">Spot {state.spots.length + gi + 1}</span>
+                <span className="plate-num" aria-hidden="true">{state.spots.length + gi + 1}</span>
+                <span className="plate-slot" aria-hidden="true" />
                 <span className="claim-hint">Claim · {betCents > 0 ? moneyWhole(betCents) : "—"}</span>
               </button>
             ))}
@@ -492,7 +540,6 @@ export default function Game() {
           )}
         </div>
       </section>
-
       <footer className="placard">
         <span>Blackjack pays 3 to 2 · Dealer hits soft 17 · Insurance pays 2 to 1</span>
         <span>Table {moneyWhole(TABLE_MIN)}–{moneyWhole(TABLE_MAX)} · Five-deck shoe · Cut card at 75%</span>
