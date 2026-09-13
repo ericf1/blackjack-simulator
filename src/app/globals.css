@@ -82,7 +82,7 @@ button:disabled {
   display: flex;
   align-items: baseline;
   gap: 18px;
-  padding: 8px 0 20px;
+  padding: 8px 0 14px;
 }
 
 .wordmark {
@@ -148,7 +148,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 18px 0 24px;
+  padding: 18px 0 16px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -374,7 +374,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 12px;
-  padding: 26px 0 10px;
+  padding: 14px 0 8px;
   align-content: start;
 }
 
@@ -595,20 +595,19 @@ button:disabled {
   }
 }
 
-/* ---- stretched spots + engraved plates ---- */
-
-.spots-stretch {
-  flex: 1;
-  min-height: 0;
-  align-content: center;
-}
+/* ---- engraved plates ---- */
 
 .spots-stretch > .plate {
   min-height: 240px;
 }
 
 .shoe-ruler {
-  padding: 16px 0 4px;
+  padding: 10px 0 2px;
+}
+
+/* The ruler-head label is not a row label — it sits right-aligned on one line. */
+.shoe-ruler .table-label {
+  width: auto;
 }
 
 .shoe-ruler-head {
@@ -677,8 +676,7 @@ button:disabled {
 /* ---- action tray ---- */
 
 .tray {
-  margin-top: auto;
-  padding: 16px 0 24px;
+  padding: 12px 0 20px;
 }
 
 .tray-content {
@@ -873,7 +871,7 @@ button:disabled {
     display: flex;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    padding: 20px 0 12px;
+    padding: 14px 0 10px;
     margin: 0 calc(-1 * var(--gutter));
     padding-left: var(--gutter);
     padding-right: var(--gutter);
@@ -918,6 +916,7 @@ button:disabled {
     z-index: 5;
     background: var(--stage);
     margin: 0 calc(-1 * var(--gutter));
+    margin-top: auto;
     padding: 12px var(--gutter) max(14px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--line-2);
     box-shadow: 0 -12px 24px -18px rgb(23 24 27 / 0.35);
@@ -963,7 +962,7 @@ button:disabled {
 
   .dealer-row {
     gap: 10px;
-    padding: 14px 0 18px;
+    padding: 14px 0 12px;
   }
 
   .table-label {
