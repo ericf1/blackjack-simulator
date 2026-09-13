@@ -13,7 +13,7 @@ import {
   type State,
   type Table,
 } from "@/blackjack/table";
-import { loadBankroll, saveBankroll } from "./lib/bankroll-store";
+import { isBankrollCheckpoint, loadBankroll, saveBankroll } from "./lib/bankroll-store";
 import { loadRules, saveRules } from "./lib/rules-store";
 import {
   loadSpeed,
@@ -277,6 +277,8 @@ export default function Game() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const [speedOpen, setSpeedOpen] = useState(false);
+  // Spoken by the polite status region: one message per settled Round.
+  const [announcement, setAnnouncement] = useState("");
   const speedBootedRef = useRef(false);
 
   // Follow the active hand on the mobile plate carousel (no-op on desktop grid).
@@ -313,9 +315,48 @@ export default function Game() {
     setSpeed(loadSpeed(window.localStorage));
   }, []);
 
+  // The Bankroll persists only at safe checkpoints (ADR-0001 adapter): settled
+  // Rounds, or betting with nothing claimed. Mid-round the stake is on the
+  // table and stays un-persisted — a reload then restores the last settled
+  // balance instead of silently forfeiting the stake.
   useEffect(() => {
-    if (state) saveBankroll(window.localStorage, state.bankroll);
-  }, [state?.bankroll]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (state && isBankrollCheckpoint(state.phase, state.spots.length)) {
+      saveBankroll(window.localStorage, state.bankroll);
+    }
+  }, [state?.bankroll, state?.phase, state?.spots.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // One announcement per settled Round for screen readers: the Dealer's final
+  // total, each Hand's verdict, the round delta, and the settled Bankroll —
+  // spoken once by the polite status region, never by the animated numeral.
+  useEffect(() => {
+    if (!state || state.phase !== "settled") return;
+    const lastSettle = [...state.history].reverse().find((h) => h.kind === "settle");
+    if (!lastSettle || lastSettle.kind !== "settle") return;
+    const verdictWord: Record<string, string> = { ...RESULT_LABEL, blackjack: "Blackjack" };
+    const verdicts = state.spots
+      .flatMap((spot, si) =>
+        spot.hands.map((hand, hi) =>
+          `Spot ${si + 1}${spot.hands.length > 1 ? `, hand ${hi + 1}` : ""}: ${verdictWord[hand.result ?? "lose"]}`,
+        ),
+      )
+      .join("; ");
+    const lastBoard = state.dealerBoard[state.dealerBoard.length - 1];
+    const dealer = lastBoard
+      ? lastBoard.natural
+        ? "Dealer blackjack."
+        : lastBoard.total > 21
+          ? "Dealer bust."
+          : `Dealer ${lastBoard.total}.`
+      : "";
+    const delta = roundStartRef.current !== null ? state.bankroll - roundStartRef.current : null;
+    const deltaText =
+      delta === null ? "" : delta === 0 ? "Even." : delta > 0 ? `Up ${money(delta)}.` : `Down ${money(-delta)}.`;
+    setAnnouncement(
+      `Round ${lastSettle.round} settled. ${dealer} ${verdicts}. ${deltaText} Bankroll ${money(state.bankroll)}`
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
+  }, [state]);
 
   // Table rules persist like the Bankroll (ADR-0001); Reset Session keeps them.
   useEffect(() => {
@@ -465,6 +506,7 @@ export default function Game() {
 
   return (
     <main className="page">
+      <p className="sr-only" role="status">{announcement}</p>
       <header className="strip">
         <span className="wordmark">Blackjack</span>
         <span
@@ -474,7 +516,7 @@ export default function Game() {
           {`BJ ${state.rules.blackjackPayout} · ${state.rules.surrender ? "Surrender" : "No surrender"}`}
         </span>
         <span className="strip-spacer" />
-        <div className="bankroll" aria-live="polite">
+        <div className="bankroll">
           <span className="bankroll-label">Bankroll</span>
           <span className="bankroll-amount">{money(bankrollShown)}</span>
         </div>
