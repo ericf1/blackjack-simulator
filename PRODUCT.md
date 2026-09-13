@@ -12,7 +12,7 @@ The developer plays it themselves — fun/personal, single human Player at the t
 
 ## Product Purpose
 
-An interactive blackjack game: the Player claims Spots, plays Hands against a Dealer, and manages a local Bankroll. Money is free (a Top-up exists) — it is a game, not a bank.
+An interactive blackjack game: the Player claims Spots, plays Hands against a Dealer, and manages a local Bankroll. Money is free (a Top-up exists) — it is a game, not a bank. Autopilot demonstrates what Basic strategy does to the live Bankroll: the human sets the Lineup, presses Autopilot, and watches the table click its own buttons — until stopped or the Bankroll can't cover the Lineup (Top-up stays the human's job).
 
 Near-term: a polished human-playable game. Later, in parallel: a headless automated simulator drives the same pure rules engine for basic-strategy verification as practice. No simulator work is scheduled now; the current focus is the UI.
 
@@ -31,7 +31,7 @@ One rules engine, two fronts: the polished table you play, and the headless simu
 - Up to 5 Spots per Round; table minimum $10, maximum $2,000 per Spot; starting Bankroll $100; Top-up is a free $100 whenever the Bankroll cannot cover the table minimum.
 - Rules canon lives in `docs/rules.md` and is the spec the engine and tests implement: 5-deck Shoe, cut card at 75% reshuffle, US hole card with dealer peek, 3:2 naturals, insurance 2:1, dealer hits soft 17, double on any two cards (allowed after split), split pairs (split aces take one card and may not resplit; other pairs resplit up to 4 Hands per Spot), late surrender forfeiting half.
 - Whole dollars; tracked in cents internally (surrender halves can produce cents).
-- The rules engine is a pure module — no React, no DOM — and the UI drives it (ADR 0001).
+- The rules engine is a pure module — no React, no DOM — and the UI drives it (ADR 0001). Basic strategy is a second pure module beside it, so Autopilot and the future simulator share one brain (ADR 0002).
 - **Deliberately undecided:** simulator scope and scale (rounds to run, statistics to report). Open, not scheduled.
 
 ## Brand Commitments
@@ -43,7 +43,7 @@ One rules engine, two fronts: the polished table you play, and the headless simu
 
 - `docs/rules.md` — rules canon, cited by tests as the spec.
 - `CONTEXT.md` — canonical domain language (Player, Dealer, Bankroll, Spot, Hand, Round, Cut card, Top-up, Shoe).
-- `src/blackjack/` — engine (`table.ts`, `shoe.ts`, `cards.ts`) with Vitest coverage; `src/app/` — Next.js UI with bankroll store + tests.
+- `src/blackjack/` — engine (`table.ts`, `shoe.ts`, `cards.ts`) with Vitest coverage; `src/blackjack/strategy.ts` — Basic strategy + Autopilot command flow (ADR 0002), chart-swept against the Wizard of Odds H17/DAS table plus headless soaks; `src/app/` — Next.js UI with bankroll store + tests.
 - Absences: no imagery, logos, testimonials, or press. Future work must not fabricate any.
 
 ## Product Principles

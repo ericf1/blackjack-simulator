@@ -1,6 +1,6 @@
 # Blackjack
 
-An interactive blackjack game where one Player claims Spots and plays Hands against a Dealer, with a locally managed Bankroll. Shaped so automated simulation can drive the same rules later.
+An interactive blackjack game where one Player claims Spots and plays Hands against a Dealer, with a locally managed Bankroll — played by hand or watched on Autopilot. Shaped so automated simulation can drive the same rules later.
 
 ## Language
 
@@ -11,6 +11,18 @@ _Avoid_: user, gambler, bettor
 **Dealer**:
 The house position that plays by fixed rules and settles every hand.
 _Avoid_: house, casino, bank
+
+**Autopilot**:
+The mode in which the Player's decisions are made automatically by Basic strategy — betting, dealing, playing, and settling all happen on their own while the human watches. The human can always stop it; Top-up stays the human's job.
+_Avoid_: autoplay, bot, demo mode, AI
+
+**Lineup**:
+The set of Spots — their count and bets — that Autopilot plays. The human sets it before starting; Autopilot re-claims it unchanged at the start of every Round until the human sets up a new one.
+_Avoid_: setup, configuration, preset, bet spread
+
+**Basic strategy**:
+The fixed chart of playing decisions — hit, stand, double, split, surrender, never insurance — that is optimal for this table's rules. Autopilot plays it exactly.
+_Avoid_: optimal play, the book, AI
 
 **Bankroll**:
 The pool of money the Player bets from and wins into. It funds all hands.

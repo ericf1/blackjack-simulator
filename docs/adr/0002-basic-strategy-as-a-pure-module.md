@@ -1,0 +1,5 @@
+# Basic strategy as a pure module
+
+Autopilot needs the Player's decisions made automatically, and the future headless simulator (the repo's namesake) must verify the same strategy against the exact same rules (ADR 0001). We decided Basic strategy lives as a pure module beside the rules engine — no React, no DOM — that observes the table `State` and returns the next action; the UI merely drives it, and the simulator will reuse it unchanged. The strategy sees only `State`, which leaks no hidden information (the hole card stays in the engine until reveal), so it cannot cheat.
+
+Rejected: baking the decision logic into the UI component (quicker, but invisible to the simulator and untestable headlessly), and putting the strategy inside the engine itself (the engine implements the rules canon, `docs/rules.md`; a playing chart is policy, not rules, and belongs beside it).
