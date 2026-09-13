@@ -8,6 +8,8 @@ An interjection — a question, a "what are you doing", a "stop" — pauses the 
 
 The bash tool is sandboxed: isolated filesystem view, its own localhost, no host network access, and processes die when the command ends. When a task needs something beyond it — a daemon the browser must reach, a system tool, network access, credentials — do not improvise a workaround. Ask the user: give the exact command to run, where to run it (plain shell or which tmux session/window), and justify the need in one line. Then wait for the user's result.
 
+**Git pushes to GitHub work from the sandbox.** gh is logged in with `repo` scope and HTTPS is the working path — push with `git -c credential.helper='!gh auth git-credential' push https://github.com/ericf1/blackjack-simulator.git main` (same form for fetch/ls-remote). The SSH remote (`git@github.com:...`) fails in here — host-key verification with no ssh-askpass — so don't route git network operations through tmux or the host.
+
 ## Running the app (dev server)
 
 The bash tool runs each command in an **ephemeral sandbox**: processes die when the command ends, and each command gets its own isolated `localhost` — so a dev server started with a plain bash command is unreachable by the next bash command *and* by the browser. Long-running processes (dev server, watchers) must live in a tmux session on the host.
@@ -64,7 +66,7 @@ Known snags: `live-wrap` errors `element_ambiguous` when a component renders the
 
 ### Issue tracker
 
-Issues and specs live as GitHub issues (`ericf1/blackjack-simulator`, accessed via SSH), managed with the `gh` CLI (including PR triage). See `docs/agents/issue-tracker.md`.
+Issues and specs live as GitHub issues (`ericf1/blackjack-simulator`), managed with the `gh` CLI — which works from the sandbox over HTTPS (including PR triage). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
