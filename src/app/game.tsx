@@ -330,7 +330,7 @@ export default function Game() {
   };
 
   // Autopilot: one command per tick — think, press the real control, dispatch.
-  // The exception is claiming: the effect loads the Lineup instantly.
+  // Claims are the exception: they skip the think and press straight away.
   const dispatch = (cmd: Command) => {
     const table = tableRef.current!;
     if (typeof cmd === "string") {
@@ -373,10 +373,10 @@ export default function Game() {
         return;
       }
       if (typeof cmd === "object") {
-        // The Lineup loads instantly, like the human's multitouch claims:
-        // every remaining Spot lands in one dispatch — no think, no press.
-        // The Deal that follows keeps the normal beat.
-        for (const bet of lineup.slice(state.spots.length)) runClaim(bet);
+        // Claims skip the think — the Lineup is fixed, nothing to decide —
+        // so the Lineup loads as a rapid cascade of presses, one Spot after
+        // another. The Deal that follows keeps the normal beat.
+        setPress(cmd);
         return;
       }
       const t = setTimeout(() => setPress(cmd), STEP_MS);
@@ -542,10 +542,12 @@ export default function Game() {
           {state.phase === "betting" &&
             Array.from({ length: MAX_SPOTS - state.spots.length }, (_, gi) => {
               const claimAmount = autopilot ? (lineup[state.spots.length] ?? 0) : betCents;
+              const pressingClaim =
+                press !== null && typeof press !== "string" && gi === state.spots.length;
               return (
                 <button
                   key={`ghost-${gi}`}
-                  className="plate plate-ghost plate-engraved"
+                  className={`plate plate-ghost plate-engraved${pressingClaim ? " auto-press" : ""}`}
                   disabled={autopilot || !canClaim}
                   aria-label={`Claim spot for ${moneyWhole(claimAmount > 0 ? claimAmount : 0)}`}
                   onClick={() => runClaim(betCents)}
