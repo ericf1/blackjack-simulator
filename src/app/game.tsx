@@ -359,6 +359,9 @@ export default function Game() {
   // The module owns the coverage rule; the UI only asks it.
   const canAutopilot = autopilotCanRun(state, pendingLineup);
 
+  // The class Autopilot's press adds to the control it is about to fire.
+  const pressed = (cmd: Command) => (press === cmd ? " auto-press" : "");
+
   const shoeRemaining = state.shoeRemaining;
   const shoePct = Math.max(0, Math.min(100, (shoeRemaining / SHOE_TOTAL) * 100));
 
@@ -542,7 +545,7 @@ export default function Game() {
                     Autopilot
                   </button>
                   <button
-                    className={`btn primary${press === "deal" ? " auto-press" : ""}`}
+                    className={`btn primary${pressed("deal")}`}
                     disabled={state.spots.length === 0 || autopilot}
                     onClick={() => act(() => tableRef.current!.deal())}
                   >
@@ -582,7 +585,7 @@ export default function Game() {
                 Insure
               </button>
               <button
-                className={`btn primary${press === "decline" ? " auto-press" : ""}`}
+                className={`btn primary${pressed("decline")}`}
                 disabled={autopilot}
                 onClick={() => act(() => tableRef.current!.decline())}
               >
@@ -607,7 +610,7 @@ export default function Game() {
                 return (
                   <button
                     key={verb.action}
-                    className={`btn${verb.action === "hit" ? " primary" : ""}${press === verb.action ? " auto-press" : ""}`}
+                    className={`btn${verb.action === "hit" ? " primary" : ""}${pressed(verb.action)}`}
                     disabled={!legal || autopilot}
                     onClick={() => act(() => tableRef.current![verb.action]())}
                   >
@@ -636,7 +639,7 @@ export default function Game() {
                 })()}
               <span className="tray-spacer" />
               <button
-                className={`btn primary${press === "nextRound" ? " auto-press" : ""}`}
+                className={`btn primary${pressed("nextRound")}`}
                 disabled={autopilot}
                 onClick={() => {
                   roundStartRef.current = null;
