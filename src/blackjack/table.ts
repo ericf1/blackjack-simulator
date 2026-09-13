@@ -14,6 +14,11 @@ export type Phase = "betting" | "insurance" | "playing" | "settled";
 export type Result = "blackjack" | "win" | "push" | "lose" | "bust" | "surrender";
 export type Action = "hit" | "stand" | "double" | "split" | "surrender";
 
+/** One bankroll sample in the Session history: a settled Round or a Top-up. */
+export type HistoryEvent =
+  | { kind: "settle"; round: number; bankroll: number }
+  | { kind: "topUp"; round: number; bankroll: number };
+
 export interface HandView {
   cards: Card[];
   bet: number; // cents staked on this hand (a double-down doubles it here)
@@ -41,6 +46,10 @@ export interface State {
   needsShuffle: boolean;
   /** Total insurance premium for the current peek (nonzero only during the insurance phase). */
   insuranceCost: number;
+  /** Bankroll at the start of the current Session — the chart's baseline. */
+  sessionStart: number;
+  /** Append-only Session history (CONTEXT.md: Session): one settle per Round, plus Top-ups. */
+  history: HistoryEvent[];
 }
 
 export interface TableOptions {
@@ -56,6 +65,9 @@ export interface TableOptions {
 export function createTable(options: TableOptions = {}) {
   const shoe = new Shoe(options.deck ?? null, options.decks ?? 5, options.rng);
   let bankroll = options.bankroll ?? START_BANKROLL;
+  let sessionStart = bankroll;
+  let round = 0; // increments as each Round is dealt
+  let history: HistoryEvent[] = [];
   let spots: Spot[] = [];
   let phase: Phase = "betting";
   let active: { spot: number; hand: number } | null = null;
@@ -85,6 +97,8 @@ export function createTable(options: TableOptions = {}) {
       shoeRemaining: shoe.remaining,
       needsShuffle: shoe.pastCut,
       insuranceCost: phase === "insurance" ? insuranceCost() : 0,
+      sessionStart,
+      history: [...history],
     };
   }
 
@@ -137,6 +151,7 @@ export function createTable(options: TableOptions = {}) {
     assertPhase("betting");
     if (spots.length === 0) throw new Error("claim at least one spot");
     if (shoe.pastCut) shoe.refresh();
+    round += 1;
 
     // one card per spot in order, dealer up, second card per spot, dealer hole
     for (const spot of spots) spot.hands.push(newHand(spot.bet, shoe.draw()));
@@ -255,6 +270,9 @@ export function createTable(options: TableOptions = {}) {
         }
       }
     }
+
+    // one sample per settled Round, taken after every payout
+    history.push({ kind: "settle", round, bankroll });
   }
 
   function hit(): void {
@@ -334,6 +352,23 @@ export function createTable(options: TableOptions = {}) {
   function topUp(): void {
     if (bankroll >= TABLE_MIN) throw new Error("top-up only when the bankroll cannot cover the table minimum");
     bankroll += TOP_UP;
+    // anchored to the Round it enables: the spike plots at that Round's x, ahead of its settle
+    history.push({ kind: "topUp", round: round + 1, bankroll });
+  }
+
+  /** Fresh Session: $100 bankroll, empty history, fresh shoe, back to betting. */
+  function resetSession(): void {
+    assertPhase("betting");
+    bankroll = START_BANKROLL;
+    sessionStart = START_BANKROLL;
+    round = 0;
+    history = [];
+    spots = [];
+    active = null;
+    insuranceBet = 0;
+    dealerHole = null;
+    dealerCards = [];
+    shoe.refresh();
   }
 
   function requireActive(): Hand {
@@ -359,6 +394,7 @@ export function createTable(options: TableOptions = {}) {
     nextRound,
     release,
     topUp,
+    resetSession,
     get state(): State {
       return state();
     },

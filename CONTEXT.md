@@ -48,6 +48,10 @@ _Avoid_: penetration, reshuffle point
 Free money the Player adds when the Bankroll can no longer cover the table minimum. It's a game — money is free.
 _Avoid_: rebuy, deposit
 
+**Session**:
+One visit at the table — from loading the game until reloading it or pressing Reset Session. The charted Bankroll history covers exactly one Session.
+_Avoid_: run, sitting, visit
+
 **Shoe**:
 The device holding the cards in play — sized in decks (currently five) and refilled when exhausted.
 _Avoid_: deck (that is one 52-card unit), pack

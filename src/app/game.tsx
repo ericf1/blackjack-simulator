@@ -13,11 +13,9 @@ import {
   type Table,
 } from "@/blackjack/table";
 import { loadBankroll, saveBankroll } from "./lib/bankroll-store";
+import { money, moneyWhole } from "./lib/format";
 import { autopilotCanRun, autopilotCommand, type Command } from "@/blackjack/strategy";
-
-const money = (cents: number) =>
-  `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const moneyWhole = (cents: number) => `$${(cents / 100).toLocaleString("en-US")}`;
+import BankrollChart from "./bankroll-chart";
 
 const GLYPH = { S: "♠", H: "♥", D: "♦", C: "♣" } as const;
 const SUIT_NAME = { S: "Spades", H: "Hearts", D: "Diamonds", C: "Clubs" } as const;
@@ -663,6 +661,15 @@ export default function Game() {
           )}
         </div>
       </section>
+      <BankrollChart
+        history={state.history}
+        sessionStart={state.sessionStart}
+        canReset={state.phase === "betting"}
+        onReset={() => {
+          stopAutopilot();
+          act(() => tableRef.current!.resetSession());
+        }}
+      />
       <footer className="placard">
         <span>Blackjack pays 3 to 2 · Dealer hits soft 17 · Insurance pays 2 to 1</span>
         <span>Table {moneyWhole(TABLE_MIN)}–{moneyWhole(TABLE_MAX)} · Five-deck shoe · Cut card at 75%</span>

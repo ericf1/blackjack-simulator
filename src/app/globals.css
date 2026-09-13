@@ -864,6 +864,166 @@ button:disabled {
   color: var(--ink-2);
 }
 
+/* ---- session chart ---- */
+
+.chart {
+  border-top: 1px solid var(--line-2);
+  padding: 12px 0 16px;
+}
+
+.chart-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.chart-title {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.chart-meta {
+  font-size: 10.5px;
+  color: var(--ink-2);
+}
+
+.chart-reset {
+  margin-left: auto;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--plate);
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  padding: 5px 12px;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.chart-reset:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.chart-reset:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.chart-reset:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.chart-body {
+  position: relative;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+}
+
+.chart-grid {
+  stroke: var(--line);
+}
+
+.chart-baseline {
+  stroke: var(--ink-2);
+  stroke-dasharray: 3 4;
+  opacity: 0.75;
+}
+
+.chart-tick {
+  fill: var(--ink-2);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-topup {
+  fill: var(--ink);
+  stroke: var(--plate);
+  stroke-width: 1.5;
+}
+
+.chart-head-dot {
+  fill: var(--accent);
+  stroke: var(--plate);
+  stroke-width: 1.5;
+}
+
+.chart-guide {
+  stroke: var(--line-2);
+  stroke-dasharray: 3 3;
+}
+
+.chart-hover-dot {
+  fill: var(--accent);
+  stroke: var(--plate);
+  stroke-width: 2;
+}
+
+.chart-tip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: var(--plate);
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.chart-tip-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.chart-tip-value {
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.chart-tip-delta {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tip-delta.up {
+  color: var(--accent);
+}
+
+.chart-tip-delta.down {
+  color: var(--red);
+}
+
+.chart-tip-delta.even {
+  color: var(--ink-2);
+}
+
 /* ---- responsive ---- */
 
 @media (max-width: 900px) {

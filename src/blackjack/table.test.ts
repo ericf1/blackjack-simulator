@@ -311,3 +311,115 @@ test("releasing a spot refunds its bet", () => {
   expect(table.state.spots[0].bet).toBe(2000);
   expect(table.state.bankroll).toBe(8000);
 });
+
+// ---- Slice 8: session history & reset --------------------------------------
+
+test("history records one settle point per round", () => {
+  // round 1: 20 vs 17 → win; round 2: 19 vs 20 → lose
+  const deck: Card[] = [
+    S("10"), H("10"), S("K"), H("7"),
+    S("9"), S("K"), S("10"), H("K"),
+  ];
+  const table = createTable({ deck });
+  expect(table.state.history).toEqual([]);
+  expect(table.state.sessionStart).toBe(10000);
+
+  table.claim(1000);
+  table.deal();
+  table.stand();
+  expect(table.state.history).toEqual([{ kind: "settle", round: 1, bankroll: 11000 }]);
+
+  table.nextRound();
+  table.claim(1000); // 11000 → 10000, and the loss returns nothing
+  table.deal();
+  table.stand();
+  expect(table.state.history).toEqual([
+    { kind: "settle", round: 1, bankroll: 11000 },
+    { kind: "settle", round: 2, bankroll: 10000 },
+  ]);
+});
+
+test("top-up before any round anchors to Round 1", () => {
+  // injected $5 bankroll can't cover the table minimum
+  const table = createTable({ deck: [], bankroll: 500 });
+  table.topUp();
+  expect(table.state.history).toEqual([{ kind: "topUp", round: 1, bankroll: 10500 }]);
+  expect(table.state.sessionStart).toBe(500); // baseline stays where the Session began
+});
+
+test("top-up after a settled round anchors to the following round", () => {
+  // five $20 bets, every hand busted → bankroll $0, round 1 settled
+  const cards: Card[] = [
+    S("10"), S("10"), S("10"), S("10"), S("10"),
+    S("6"),
+    S("10"), S("10"), S("10"), S("10"), S("10"),
+    S("K"),
+    H("2"), H("2"), H("2"), H("2"), H("2"),
+  ];
+  const table = createTable({ deck: cards });
+  for (let i = 0; i < 5; i++) table.claim(2000);
+  table.deal();
+  for (let i = 0; i < 5; i++) table.hit();
+  expect(table.state.history).toEqual([{ kind: "settle", round: 1, bankroll: 0 }]);
+
+  table.topUp();
+  expect(table.state.history).toEqual([
+    { kind: "settle", round: 1, bankroll: 0 },
+    { kind: "topUp", round: 2, bankroll: 10000 },
+  ]);
+});
+
+test("resetSession starts a fresh Session", () => {
+  const table = createTable({ rng: () => 0.5, bankroll: 5000 });
+  table.claim(1000);
+  table.deal();
+  table.stand();
+  table.nextRound();
+  table.claim(1000); // a stray claim is wiped too
+  table.resetSession();
+
+  expect(table.state.phase).toBe("betting");
+  expect(table.state.bankroll).toBe(10000); // fresh $100, not the injected $50
+  expect(table.state.sessionStart).toBe(10000);
+  expect(table.state.history).toEqual([]);
+  expect(table.state.spots).toHaveLength(0);
+  expect(table.state.shoeRemaining).toBe(260); // fresh shoe
+});
+
+test("resetSession clears a spent shoe", () => {
+  // four cards, cut card after the third: one deal spends the whole shoe
+  const table = createTable({ deck: [S("10"), S("10"), S("8"), H("8")] });
+  table.claim(1000);
+  table.deal();
+  table.stand();
+  expect(table.state.needsShuffle).toBe(true);
+  table.nextRound();
+  table.resetSession();
+  expect(table.state.needsShuffle).toBe(false);
+  expect(table.state.shoeRemaining).toBe(4); // injected decks replay on refresh
+});
+
+test("after resetSession the next settle is Round 1 again", () => {
+  // constant rng: the reshuffled shoe repeats the dealt cards, so the post-reset deal is Ace-free
+  const table = createTable({ rng: () => 0.5 });
+  table.claim(1000);
+  table.deal();
+  table.stand();
+  table.nextRound();
+  table.claim(1000);
+  table.resetSession();
+  table.claim(1000);
+  table.deal();
+  table.stand();
+  expect(table.state.history).toHaveLength(1);
+  expect(table.state.history[0]).toMatchObject({ kind: "settle", round: 1 });
+});
+
+test("resetSession refuses outside the betting phase", () => {
+  const table = createTable({ deck: [S("10"), S("10"), S("8"), H("8")] });
+  table.claim(1000);
+  table.deal();
+  expect(() => table.resetSession()).toThrow(/betting/);
+  table.stand(); // settled — still not betting
+  expect(() => table.resetSession()).toThrow(/betting/);
+});
