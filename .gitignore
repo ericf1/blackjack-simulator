@@ -23,3 +23,6 @@ id_ed25519
 
 # impeccable skill working state (logs, question state, review captures)
 .impeccable/
+
+# agent scratch files
+tmp/
