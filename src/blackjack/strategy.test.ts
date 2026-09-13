@@ -15,6 +15,7 @@ const ALL: Action[] = ["hit", "stand", "double", "split", "surrender"];
 function playing(player: Card[], up: Card, legal: Action[] = ALL): State {
   return {
     phase: "playing",
+    rules: { surrender: true, blackjackPayout: "3:2" },
     bankroll: 100_00,
     spots: [
       {
@@ -166,11 +167,41 @@ test("8,8 vs A: surrender, else split, else hit", () => {
   expect(basicStrategy(playing(pairCards("8"), S("A"), ["hit", "stand", "split"]))).toBe("split");
   expect(basicStrategy(playing(pairCards("8"), S("A"), ["hit", "stand"]))).toBe("hit");
 });
+
+// ---- The no-surrender table (surrender removed from legal) -------------------
+// With State.rules.surrender off the engine stops offering surrender; the
+// fallback actions above ARE the correct no-surrender plays (WoO H17).
+
+const NO_SURRENDER: Action[] = ["hit", "stand", "double", "split"];
+
+test("no-surrender chart: 16/15 vs 9-T-A hit, 17 vs A stands, 8,8 vs A splits", () => {
+  expect(basicStrategy(playing(hardCards(16), S("9"), NO_SURRENDER))).toBe("hit");
+  expect(basicStrategy(playing(hardCards(16), S("10"), NO_SURRENDER))).toBe("hit");
+  expect(basicStrategy(playing(hardCards(16), S("A"), NO_SURRENDER))).toBe("hit");
+  expect(basicStrategy(playing(hardCards(15), S("10"), NO_SURRENDER))).toBe("hit");
+  expect(basicStrategy(playing(hardCards(15), S("A"), NO_SURRENDER))).toBe("hit");
+  expect(basicStrategy(playing(hardCards(17), S("A"), NO_SURRENDER))).toBe("stand"); // Rs
+  expect(basicStrategy(playing(pairCards("8"), S("A"), NO_SURRENDER))).toBe("split"); // Rp
+});
+
+test("the real no-surrender engine plays the fallback chart: 16 vs 10 hits", () => {
+  // P1=10♠, up=H10, P2=6♠ → 16; hole=9♠ → dealer 19; hit → 2 → 18, stands, loses
+  const table = createTable({ deck: [S("10"), H("10"), S("6"), S("9"), S("2"), S("2")], rules: { surrender: false } });
+  table.claim(10_00);
+  table.deal();
+  expect(table.state.legal).toEqual(["hit", "stand", "double"]);
+  expect(basicStrategy(table.state)).toBe("hit");
+  table.hit();
+  table.stand();
+  expect(table.state.spots[0].hands[0].result).toBe("lose");
+  expect(table.state.bankroll).toBe(90_00);
+});
 // ---- Autopilot command flow --------------------------------------------------
 
 
 const betting = (bankroll: number, claimed: number[] = []): State => ({
   phase: "betting",
+  rules: { surrender: true, blackjackPayout: "3:2" },
   bankroll,
   spots: claimed.map((bet, id) => ({ id, bet, hands: [] })),
   active: null,

@@ -1,0 +1,5 @@
+# Table rules are per-Session configuration
+
+docs/rules.md stays the canon but now describes the *default* table (late surrender on, blackjack pays 3:2); the Player can change those two rules between Rounds, and the choices persist in localStorage like the Bankroll (ADR 0001). Basic strategy stays a single rules-blind module (ADR 0002): the engine stops offering surrender when the rule is off, and the chart's ordered preference lists already encode the correct no-surrender fallbacks (16/15 vs 9-T-A → hit, 17 vs A → stand, 8-8 vs A → split), so Autopilot and the future simulator play the matching chart with no strategy branching. The payout changes no playing decisions — only settlement math, which stays integer-exact for whole-dollar bets (100¢ × 6/5 = 120¢).
+
+Rejected: a fully parameterized rules panel (deck count, H17/S17, DAS) — each knob multiplies the strategy cells that must be verified; revisit when the simulator needs them. Also rejected: forcing a fresh Session on a rule change — the settle history is per-Round and money is free.

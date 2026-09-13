@@ -14,6 +14,19 @@ export type Phase = "betting" | "insurance" | "playing" | "settled";
 export type Result = "blackjack" | "win" | "push" | "lose" | "bust" | "surrender";
 export type Action = "hit" | "stand" | "double" | "split" | "surrender";
 
+/** The natural blackjack payout, as posted on the felt. */
+export type BlackjackPayout = "3:2" | "6:5";
+
+/** The rules the Player can change between Rounds (CONTEXT.md: Table rules). */
+export interface Rules {
+  /** Late surrender: forfeit half the bet on the first two cards (docs/rules.md). */
+  surrender: boolean;
+  blackjackPayout: BlackjackPayout;
+}
+
+/** The docs/rules.md canon — the table the Player sits down to. */
+export const DEFAULT_RULES: Rules = { surrender: true, blackjackPayout: "3:2" };
+
 /** One bankroll sample in the Session history: a settled Round or a Top-up. */
 export type HistoryEvent =
   | { kind: "settle"; round: number; bankroll: number }
@@ -37,6 +50,8 @@ export interface SpotView {
 
 export interface State {
   phase: Phase;
+  /** The live Table rules (CONTEXT.md) — read by the UI, the strategy, and the simulator. */
+  rules: Rules;
   bankroll: number;
   spots: SpotView[];
   active: { spot: number; hand: number } | null;
@@ -59,6 +74,8 @@ export interface TableOptions {
   deck?: Card[];
   /** Injected starting bankroll (persistence adapter). Defaults to $100. */
   bankroll?: number;
+  /** Table rules (CONTEXT.md). Defaults to the docs/rules.md canon. */
+  rules?: Partial<Rules>;
 }
 
 // ---- Table ----------------------------------------------------------------
@@ -71,6 +88,7 @@ export function createTable(options: TableOptions = {}) {
   let spots: Spot[] = [];
   let phase: Phase = "betting";
   let active: { spot: number; hand: number } | null = null;
+  let rules: Rules = { ...DEFAULT_RULES, ...options.rules };
   let insuranceBet = 0;
   let dealerHole: Card | null = null;
   let dealerCards: Card[] = [];
@@ -85,6 +103,7 @@ export function createTable(options: TableOptions = {}) {
   function state(): State {
     return {
       phase,
+      rules: { ...rules },
       bankroll,
       spots: spots.map((spot) => ({
         id: spot.id,
@@ -122,7 +141,7 @@ export function createTable(options: TableOptions = {}) {
     ) {
       actions.push("split");
     }
-    if (firstTwo && !h.fromSplit) actions.push("surrender");
+    if (rules.surrender && firstTwo && !h.fromSplit) actions.push("surrender");
     return actions;
   }
 
@@ -256,7 +275,7 @@ export function createTable(options: TableOptions = {}) {
           hand.result = "lose";
         } else if (natural) {
           hand.result = "blackjack";
-          bankroll += hand.bet + Math.floor((hand.bet * 3) / 2);
+          bankroll += hand.bet + blackjackWinnings(hand.bet, rules.blackjackPayout);
         } else if (total > 21) {
           hand.result = "bust";
         } else if (dealerTotal > 21 || total > dealerTotal) {
@@ -326,6 +345,7 @@ export function createTable(options: TableOptions = {}) {
   }
 
   function surrender(): void {
+    if (!rules.surrender) throw new Error("surrender is not offered at this table");
     const h = requireActive();
     if (h.cards.length !== 2 || h.fromSplit) {
       throw new Error("surrender on the first two cards only, before splitting");
@@ -333,6 +353,12 @@ export function createTable(options: TableOptions = {}) {
     h.surrendered = true;
     h.done = true;
     advance();
+  }
+
+  /** Table rules (CONTEXT.md) change between Rounds only — the betting phase. */
+  function setRules(patch: Partial<Rules>): void {
+    assertPhase("betting");
+    rules = { ...rules, ...patch };
   }
 
   function nextRound(): void {
@@ -356,7 +382,7 @@ export function createTable(options: TableOptions = {}) {
     history.push({ kind: "topUp", round: round + 1, bankroll });
   }
 
-  /** Fresh Session: $100 bankroll, empty history, fresh shoe, back to betting. */
+  /** Fresh Session: $100 bankroll, empty history, fresh shoe, back to betting. Table rules are kept — Reset resets money, not the table. */
   function resetSession(): void {
     assertPhase("betting");
     bankroll = START_BANKROLL;
@@ -391,6 +417,7 @@ export function createTable(options: TableOptions = {}) {
     double,
     split,
     surrender,
+    setRules,
     nextRound,
     release,
     topUp,
@@ -402,6 +429,12 @@ export function createTable(options: TableOptions = {}) {
 }
 
 export type Table = ReturnType<typeof createTable>;
+
+/** Natural winnings in cents, integer-exact for whole-dollar bets (bets are multiples of 100). */
+export function blackjackWinnings(bet: number, payout: BlackjackPayout): number {
+  const [num, den] = payout === "3:2" ? [3, 2] : [6, 5];
+  return Math.floor((bet * num) / den);
+}
 
 function isNatural(cards: Card[]): boolean {
   return cards.length === 2 && handValue(cards).total === 21;

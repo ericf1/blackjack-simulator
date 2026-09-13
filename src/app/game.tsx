@@ -9,10 +9,12 @@ import {
   TABLE_MAX,
   TABLE_MIN,
   TOP_UP,
+  type BlackjackPayout,
   type State,
   type Table,
 } from "@/blackjack/table";
 import { loadBankroll, saveBankroll } from "./lib/bankroll-store";
+import { loadRules, saveRules } from "./lib/rules-store";
 import { money, moneyWhole } from "./lib/format";
 import { autopilotCanRun, autopilotCommand, type Command } from "@/blackjack/strategy";
 import BankrollChart from "./bankroll-chart";
@@ -50,13 +52,14 @@ const PIPS: Record<string, Array<[number, number, boolean?]>> = {
 };
 
 const RESULT_LABEL: Record<string, string> = {
-  blackjack: "Blackjack 3:2",
   win: "Win",
   push: "Push",
   lose: "Lose",
   bust: "Bust",
   surrender: "Surrendered",
 };
+
+const PAYOUT_TEXT: Record<BlackjackPayout, string> = { "3:2": "3 to 2", "6:5": "6 to 5" };
 
 function useCountUp(target: number, ms = 700): number {
   const [shown, setShown] = useState(target);
@@ -238,6 +241,7 @@ export default function Game() {
   const [autopilot, setAutopilot] = useState(false);
   const [lineup, setLineup] = useState<number[]>([]);
   const [press, setPress] = useState<Command | null>(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   // Follow the active hand on the mobile plate carousel (no-op on desktop grid).
   useEffect(() => {
@@ -264,7 +268,10 @@ export default function Game() {
   }, [state?.phase]);
 
   useEffect(() => {
-    const table = createTable({ bankroll: loadBankroll(window.localStorage) });
+    const table = createTable({
+      bankroll: loadBankroll(window.localStorage),
+      rules: loadRules(window.localStorage),
+    });
     tableRef.current = table;
     setState(table.state);
   }, []);
@@ -272,6 +279,21 @@ export default function Game() {
   useEffect(() => {
     if (state) saveBankroll(window.localStorage, state.bankroll);
   }, [state?.bankroll]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Table rules persist like the Bankroll (ADR-0001); Reset Session keeps them.
+  useEffect(() => {
+    if (state) saveRules(window.localStorage, state.rules);
+  }, [state?.rules.surrender, state?.rules.blackjackPayout]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Esc closes the Table rules modal.
+  useEffect(() => {
+    if (!rulesOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setRulesOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [rulesOpen]);
 
   // One claim path for human and Autopilot: the round's P/L baseline is the bankroll
   // before the first claim of the Round (the stake is deducted at claim time).
@@ -360,6 +382,14 @@ export default function Game() {
   // The class Autopilot's press adds to the control it is about to fire.
   const pressed = (cmd: Command) => (press === cmd ? " auto-press" : "");
 
+  // Table rules change between Rounds, and Autopilot must not be surprised.
+  const rulesEditable = state.phase === "betting" && !autopilot;
+  const gearTitle = autopilot
+    ? "Stop Autopilot to change rules"
+    : state.phase === "betting"
+      ? "Table rules"
+      : "Rules change between rounds";
+
   const shoeRemaining = state.shoeRemaining;
   const shoePct = Math.max(0, Math.min(100, (shoeRemaining / SHOE_TOTAL) * 100));
 
@@ -372,11 +402,29 @@ export default function Game() {
     <main className="page">
       <header className="strip">
         <span className="wordmark">Blackjack</span>
+        <span
+          className="rules-chip"
+          aria-label={`Table rules: blackjack pays ${PAYOUT_TEXT[state.rules.blackjackPayout]}, ${state.rules.surrender ? "late surrender" : "no surrender"}`}
+        >
+          {`BJ ${state.rules.blackjackPayout} · ${state.rules.surrender ? "Surrender" : "No surrender"}`}
+        </span>
         <span className="strip-spacer" />
         <div className="bankroll" aria-live="polite">
           <span className="bankroll-label">Bankroll</span>
           <span className="bankroll-amount">{money(bankrollShown)}</span>
         </div>
+        <button
+          className="gear-btn"
+          aria-label="Table rules"
+          title={gearTitle}
+          disabled={!rulesEditable}
+          onClick={() => setRulesOpen(true)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
       </header>
 
       <section className={`table${autopilot ? " autopilot" : ""}`} aria-label="Blackjack table">
@@ -443,7 +491,9 @@ export default function Game() {
                           <span className="hand-bet">{moneyWhole(hand.bet)}</span>
                           {hand.result && (
                             <span key={hand.result} className={`result stamp ${hand.result}`}>
-                              {RESULT_LABEL[hand.result]}
+                              {hand.result === "blackjack"
+                                ? `Blackjack ${state.rules.blackjackPayout}`
+                                : RESULT_LABEL[hand.result]}
                             </span>
                           )}
                         </div>
@@ -670,8 +720,63 @@ export default function Game() {
           act(() => tableRef.current!.resetSession());
         }}
       />
+      {rulesOpen && (
+        <div className="modal-backdrop" onClick={() => setRulesOpen(false)}>
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Table rules"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="modal-head">
+              <h2 className="modal-title">Table rules</h2>
+              <button className="modal-close" aria-label="Close table rules" onClick={() => setRulesOpen(false)}>
+                ×
+              </button>
+            </header>
+            <p className="modal-note">Changes take effect at the next round and are remembered on this device.</p>
+            <div className="modal-row">
+              <span className="modal-label">Blackjack pays</span>
+              <div className="seg" role="group" aria-label="Blackjack payout">
+                {(["3:2", "6:5"] as const).map((p) => (
+                  <button
+                    key={p}
+                    className={`seg-btn${state.rules.blackjackPayout === p ? " on" : ""}`}
+                    aria-pressed={state.rules.blackjackPayout === p}
+                    disabled={!rulesEditable}
+                    onClick={() => act(() => tableRef.current!.setRules({ blackjackPayout: p }))}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="modal-row">
+              <span className="modal-label">Late surrender</span>
+              <button
+                className={`switch${state.rules.surrender ? " on" : ""}`}
+                role="switch"
+                aria-checked={state.rules.surrender}
+                aria-label="Late surrender"
+                disabled={!rulesEditable}
+                onClick={() => act(() => tableRef.current!.setRules({ surrender: !state.rules.surrender }))}
+              >
+                <span className="knob" />
+              </button>
+            </div>
+            <p className="modal-hint">
+              Late surrender forfeits half the bet on the first two cards. 6:5 pays less on naturals — a worse deal for
+              the Player. Basic strategy follows the table either way.
+            </p>
+          </section>
+        </div>
+      )}
       <footer className="placard">
-        <span>Blackjack pays 3 to 2 · Dealer hits soft 17 · Insurance pays 2 to 1</span>
+        <span>
+          Blackjack pays {PAYOUT_TEXT[state.rules.blackjackPayout]} · Dealer hits soft 17 · Insurance pays 2 to 1
+          {!state.rules.surrender && " · No surrender"}
+        </span>
         <span>Table {moneyWhole(TABLE_MIN)}–{moneyWhole(TABLE_MAX)} · Five-deck shoe · Cut card at 75%</span>
       </footer>
     </main>

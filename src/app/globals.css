@@ -1249,3 +1249,201 @@ button:disabled {
     animation: none;
   }
 }
+
+/* ---- Table rules: header chip, gear, modal (CONTEXT.md: Table rules) ------- */
+
+.rules-chip {
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.gear-btn {
+  align-self: center;
+  border: 1px solid var(--line);
+  background: var(--plate);
+  color: var(--ink-2);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.gear-btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-2);
+}
+
+.gear-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 24, 27, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+.modal {
+  background: var(--plate);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(23, 24, 27, 0.25);
+  padding: 18px 22px 20px;
+  width: min(360px, 100%);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.modal-title {
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.modal-close {
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--ink);
+}
+
+.modal-note {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin: 0 0 12px;
+}
+
+.modal-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+
+.modal-row:last-of-type {
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-label {
+  flex: 1;
+  font-size: 13.5px;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.seg-btn {
+  border: 0;
+  background: var(--plate);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.seg-btn + .seg-btn {
+  border-left: 1px solid var(--line);
+}
+
+.seg-btn.on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.seg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.switch {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #d8d5cc;
+  cursor: pointer;
+  padding: 0;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.switch .knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(23, 24, 27, 0.3);
+  transition: transform 140ms ease;
+}
+
+.switch.on {
+  background: var(--win);
+  border-color: var(--win);
+}
+
+.switch.on .knob {
+  transform: translateX(18px);
+}
+
+.switch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.modal-hint {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin: 14px 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gear-btn,
+  .seg-btn,
+  .switch,
+  .switch .knob {
+    transition: none;
+  }
+}

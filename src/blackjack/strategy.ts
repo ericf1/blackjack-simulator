@@ -11,6 +11,12 @@ import type { Action, State } from "./table";
  * Each situation resolves to an ordered list of preferences — e.g. soft 18 vs 2
  * is double-else-stand — and the first entry that is legal wins. The last entry
  * of every list is always hit or stand, which the engine always offers.
+ *
+ * Rules awareness comes through State: the surrender preferences carry their
+ * correct no-surrender fallbacks (16/15 vs 9-T-A → hit, 17 vs A → stand,
+ * 8,8 vs A → split), so when the table's surrender rule is off the engine
+ * simply stops offering it and the first legal preference is the right play.
+ * The payout (3:2 vs 6:5) changes no playing decisions — settlement only.
  */
 
 // dealer upcard index: 2..9, T (any ten-value), A

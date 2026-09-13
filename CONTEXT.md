@@ -40,6 +40,10 @@ _Avoid_: spot (that is the betting position), box
 One cycle of betting, dealing, playing, and settlement across all Spots.
 _Avoid_: game, turn, hand (ambiguous)
 
+**Table rules**:
+The settings the Player can change between Rounds — whether Surrender is offered and the Blackjack payout (3:2 or 6:5). They persist across Sessions; every other rule of the table is fixed.
+_Avoid_: settings, house rules, preferences
+
 **Cut card**:
 The point in the Shoe that ends dealing; reaching it reshuffles a fresh Shoe before the old one runs out.
 _Avoid_: penetration, reshuffle point

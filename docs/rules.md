@@ -18,7 +18,7 @@ The canon from the grilling session. The rules engine implements exactly this; t
 
 - US-style hole card: dealer's upcard plus face-down hole card.
 - Dealer **peeks** for blackjack when showing an Ace or any 10-value.
-- Player natural blackjack pays **3:2** (two-card 21 on the deal only; a 21 built after splitting is *not* a blackjack).
+- Player natural blackjack pays **3:2** — the default; the Player can switch the table to **6:5** in the Table rules modal (see below). Either way: two-card 21 on the deal only; a 21 built after splitting is *not* a blackjack.
 - Insurance: offered when dealer shows an Ace, pays **2:1**, settled immediately after the peek.
 
 ## Dealer play
@@ -31,7 +31,16 @@ The canon from the grilling session. The rules engine implements exactly this; t
 - **Hit / Stand**: always available to a live Hand.
 - **Double**: any two cards only (not after hitting); allowed after split; take exactly one card; the Spot's bet doubles.
 - **Split**: pairs only. Split aces receive one card each and may not be resplit. Non-ace pairs may resplit, up to **4 Hands per Spot**. Double after split allowed.
-- **Surrender**: late — available after the peek only if the dealer does not have blackjack; forfeits half the bet.
+- **Surrender**: late — available after the peek only if the dealer does not have blackjack; forfeits half the bet. **On by default**; the Player can turn it off in the Table rules modal.
+
+## Table rules (configurable)
+
+Two rules are the Player's to change between Rounds, in the Table rules modal (the header gear):
+
+- Natural payout: **3:2** (default) or **6:5**.
+- Late surrender: **on** (default) or **off**.
+
+Choices persist on the device across reloads; **Reset Session keeps them**. Basic strategy follows the table: with surrender off the chart plays its no-surrender fallbacks (16/15 vs 9-T-A hit, 17 vs A stand, 8-8 vs A split); the payout changes no playing decisions. Everything else in this document is fixed.
 
 ## Settlement
 

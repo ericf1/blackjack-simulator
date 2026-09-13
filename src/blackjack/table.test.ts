@@ -423,3 +423,56 @@ test("resetSession refuses outside the betting phase", () => {
   table.stand(); // settled — still not betting
   expect(() => table.resetSession()).toThrow(/betting/);
 });
+
+// ---- Slice 9: table rules (CONTEXT.md: Table rules) -------------------------
+
+test("the default table is the docs/rules.md canon", () => {
+  const table = createTable({ deck: [] });
+  expect(table.state.rules).toEqual({ surrender: true, blackjackPayout: "3:2" });
+});
+
+test("player natural pays 6:5 when the table is set to it", () => {
+  // P1=A♠, up=9♠, P2=K♠ → natural; dealer 9+5=14, draws 2→16, 3→19
+  const table = createTable({
+    deck: [S("A"), S("9"), S("K"), S("5"), S("2"), S("3")],
+    rules: { blackjackPayout: "6:5" },
+  });
+  table.claim(1000);
+  table.deal();
+  expect(table.state.spots[0].hands[0].result).toBe("blackjack");
+  // $100 − $10 bet + $10 stake + $12 (6:5) = $112
+  expect(table.state.bankroll).toBe(11200);
+});
+
+test("a no-surrender table never offers the action and refuses it", () => {
+  // P1=10♠, up=6♠, P2=6♠ → 16; dealer 6+7=13 → draws 2, 2 → 17
+  const table = createTable({
+    deck: [S("10"), S("6"), S("6"), S("7"), S("2"), S("2")],
+    rules: { surrender: false },
+  });
+  table.claim(1000);
+  table.deal();
+  expect(table.state.legal).toEqual(["hit", "stand", "double"]);
+  expect(() => table.surrender()).toThrow(/not offered/);
+  table.stand(); // 16 loses to 17 — the round plays on normally
+  expect(table.state.spots[0].hands[0].result).toBe("lose");
+  expect(table.state.bankroll).toBe(9000);
+});
+
+test("setRules applies between rounds and is locked mid-round", () => {
+  const table = createTable({ deck: [S("10"), S("6"), S("6"), S("7"), S("2"), S("2")] });
+  table.setRules({ blackjackPayout: "6:5", surrender: false });
+  expect(table.state.rules).toEqual({ surrender: false, blackjackPayout: "6:5" });
+  table.claim(1000);
+  table.deal();
+  expect(() => table.setRules({ surrender: true })).toThrow(/betting/);
+  table.stand();
+  expect(table.state.rules).toEqual({ surrender: false, blackjackPayout: "6:5" });
+});
+
+test("Reset Session keeps the table rules", () => {
+  const table = createTable({ rng: () => 0.5 });
+  table.setRules({ surrender: false, blackjackPayout: "6:5" });
+  table.resetSession();
+  expect(table.state.rules).toEqual({ surrender: false, blackjackPayout: "6:5" });
+});
